@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${TEST_DATABASE_URL:jdbc:h2:mem:identity_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
+    username: ${TEST_DATABASE_USERNAME:sa}
+    password: ${TEST_DATABASE_PASSWORD:}
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+app:
+  jwt:
+    # Test fixture only. Never use this signing key outside automated tests.
+    secret: dGVzdC1vbmx5LXNlY3JldC1mb3Itb3Vyc3BhY2UtMzItYnl0ZXM=
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"

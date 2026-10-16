@@ -1,0 +1,16 @@
+# Local H2 fallback. For persistent data set the PostgreSQL datasource variables.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:ourspace_dev;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    show-sql: false
+
+# Flyway remains enabled and Hibernate validates its schema in dev as well.
+# If JWT_SECRET is absent in dev ONLY, an ephemeral key is generated at startup.
+# Restarting this mode invalidates previously issued tokens.
+management:
+  endpoint:
+    health:
+      show-details: always
