@@ -1,0 +1,32 @@
+# Maven and Java
+backend/target/
+*.class
+*.jar
+*.war
+
+# Environment and Secrets
+.env
+.env.local
+*.log
+
+# IntelliJ IDEA & VS Code
+.idea/
+*.iml
+.vscode/
+*.ipr
+*.iws
+
+# Mobile Flutter
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+
+# OS and Temporary Office Files
+Thumbs.db
+Desktop.ini
+.DS_Store
+~$*.docx
