@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      .bg{fill:#f5f0ed}.phone{fill:#fffbf8;stroke:#d9ccc8;stroke-width:2}
+      .ink{fill:#29262b}.muted{fill:#6b6265}.rose{fill:#c74e70}.soft{fill:#fce8ec}
+      .field{fill:#fff;stroke:#e8ddd9;stroke-width:1.5}.button{fill:#c74e70}
+      .title{font:700 34px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .body{font:400 15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .label{font:500 14px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .brand{font:700 22px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+      .cta{font:600 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#fff}
+      .caption{font:600 20px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="900"/>
+  <text x="72" y="72" class="title ink">OurSpace · Sprint 1 UI</text>
+  <text x="72" y="105" class="body muted">M1 / S1-01 · Screen flow and visual reference · scaled mobile previews</text>
+
+  <g transform="translate(72 145)">
+    <rect class="phone" width="320" height="650" rx="30"/>
+    <text x="24" y="48" class="brand rose">♥</text><text x="49" y="48" class="brand ink">ourspace</text>
+    <text x="24" y="137" class="title ink">Chào mừng</text>
+    <text x="24" y="177" class="title ink">trở lại.</text>
+    <text x="24" y="209" class="body muted">Những điều thân thuộc đang đợi bạn.</text>
+    <rect x="24" y="247" width="272" height="44" rx="13" class="soft"/>
+    <text x="64" y="275" class="label rose">Đăng nhập</text><text x="201" y="275" class="label muted">Đăng ký</text>
+    <rect x="24" y="320" width="272" height="58" rx="14" class="field"/>
+    <text x="42" y="355" class="label muted">Email</text>
+    <rect x="24" y="394" width="272" height="58" rx="14" class="field"/>
+    <text x="42" y="429" class="label muted">Mật khẩu</text>
+    <rect x="24" y="482" width="272" height="54" rx="14" class="button"/>
+    <text x="114" y="516" class="cta">Đăng nhập</text>
+    <text x="58" y="603" class="body muted">Một nơi riêng cho những điều chung.</text>
+    <text x="0" y="690" class="caption ink">01 · Login</text>
+  </g>
+
+  <g transform="translate(444 145)">
+    <rect class="phone" width="320" height="650" rx="30"/>
+    <text x="24" y="48" class="brand rose">♥</text><text x="49" y="48" class="brand ink">ourspace</text>
+    <text x="24" y="126" class="title ink">Tạo không gian</text>
+    <text x="24" y="166" class="title ink">cho hai người.</text>
+    <text x="24" y="198" class="body muted">Khoảnh khắc chỉ hai bạn nhìn thấy.</text>
+    <rect x="24" y="228" width="272" height="44" rx="13" class="soft"/>
+    <text x="64" y="256" class="label muted">Đăng nhập</text><text x="201" y="256" class="label rose">Đăng ký</text>
+    <rect x="24" y="296" width="272" height="54" rx="14" class="field"/>
+    <text x="42" y="329" class="label muted">Tên hiển thị</text>
+    <rect x="24" y="364" width="272" height="54" rx="14" class="field"/>
+    <text x="42" y="397" class="label muted">Email</text>
+    <rect x="24" y="432" width="272" height="54" rx="14" class="field"/>
+    <text x="42" y="465" class="label muted">Mật khẩu</text>
+    <text x="27" y="507" class="body muted">Ít nhất 8 ký tự</text>
+    <rect x="24" y="529" width="272" height="54" rx="14" class="button"/>
+    <text x="103" y="563" class="cta">Tạo tài khoản</text>
+    <text x="0" y="690" class="caption ink">02 · Register</text>
+  </g>
+
+  <g transform="translate(816 145)">
+    <rect class="phone" width="320" height="650" rx="30"/>
+    <text x="24" y="48" class="brand rose">♥</text><text x="49" y="48" class="brand ink">ourspace</text>
+    <circle cx="274" cy="40" r="21" class="soft"/>
+    <text x="266" y="47" class="label rose">A</text>
+    <text x="24" y="150" class="title ink">Chào Alex,</text>
+    <text x="24" y="184" class="body muted">Không gian của bạn bắt đầu từ đây.</text>
+    <rect x="24" y="227" width="272" height="284" rx="24" class="soft"/>
+    <text x="48" y="292" class="title rose">♡</text>
+    <text x="48" y="366" class="caption ink">Cùng nhau tạo nên</text>
+    <text x="48" y="395" class="caption ink">OurSpace</text>
+    <text x="48" y="433" class="body muted">Kỷ niệm chung sẽ xuất hiện</text>
+    <text x="48" y="455" class="body muted">khi hai bạn kết nối.</text>
+    <text x="0" y="690" class="caption ink">03 · Home placeholder</text>
+  </g>
+
+  <g transform="translate(1188 145)">
+    <rect class="phone" width="320" height="650" rx="30"/>
+    <text x="25" y="48" class="caption ink">‹</text>
+    <text x="73" y="48" class="caption ink">Hồ sơ của tôi</text>
+    <circle cx="160" cy="129" r="43" class="soft"/>
+    <text x="146" y="143" class="title rose">A</text>
+    <text x="24" y="229" class="caption ink">Thông tin cá nhân</text>
+    <text x="24" y="258" class="body muted">Tên hiển thị trong không gian chung.</text>
+    <rect x="24" y="289" width="272" height="58" rx="14" class="field"/>
+    <text x="42" y="326" class="label ink">Alex</text>
+    <rect x="24" y="365" width="272" height="58" rx="14" class="field"/>
+    <text x="42" y="402" class="label muted">alex@example.com</text>
+    <text x="24" y="449" class="body muted">Email hiện chưa thể thay đổi</text>
+    <rect x="24" y="477" width="272" height="54" rx="14" class="button"/>
+    <text x="104" y="511" class="cta">Lưu thay đổi</text>
+    <text x="122" y="575" class="label rose">Đăng xuất</text>
+    <text x="0" y="690" class="caption ink">04 · Profile</text>
+  </g>
+</svg>
