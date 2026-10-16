@@ -4,6 +4,10 @@
 **Kế hoạch:** 3 sprint × 4 tuần (dự kiến, ngày bắt đầu chưa xác định).  
 **Mục tiêu:** Xây dựng ứng dụng couple dành cho 2 người, có chia sẻ ảnh và widget kiểu Locket, nhật ký ảnh, kỷ niệm và 2 tính năng AI.
 
+**Implementation hiện có:** backend M3 Sprint 1 (auth/JWT/profile/validation/tests).
+Chạy và demo theo [Backend README](backend/README-BACKEND.md); phạm vi và bàn giao
+tại [M3 Sprint 1](docs/13-m3-sprint1-delivery.md). Các module khác vẫn theo blueprint.
+
 ## Bắt đầu đọc từ đâu?
 
 | Tài liệu | Nội dung |
