@@ -10,6 +10,9 @@ import '../../domain/user_profile.dart';
 import '../../data/auth_repository.dart';
 import '../../data/http_auth_repository.dart';
 import '../../data/mock_auth_repository.dart';
+import '../../pairing/data/couple_repository.dart';
+import '../../pairing/data/mock_couple_repository.dart';
+import '../../pairing/data/http_couple_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Core service providers
@@ -36,6 +39,16 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     return MockAuthRepository(storage: ref.watch(secureStorageProvider));
   }
   return HttpAuthRepository(
+    client: ref.watch(dioClientProvider),
+    storage: ref.watch(secureStorageProvider),
+  );
+});
+
+final coupleRepositoryProvider = Provider<CoupleRepository>((ref) {
+  if (AppConfig.useMock) {
+    return MockCoupleRepository(storage: ref.watch(secureStorageProvider));
+  }
+  return HttpCoupleRepository(
     client: ref.watch(dioClientProvider),
     storage: ref.watch(secureStorageProvider),
   );
