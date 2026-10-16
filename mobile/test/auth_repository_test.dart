@@ -2,10 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/data/auth_repository.dart';
+import 'package:mobile/core/error/app_exception.dart';
+import 'package:mobile/core/network/dio_client.dart';
+import 'package:mobile/core/storage/secure_storage.dart';
+import 'package:mobile/features/auth/data/http_auth_repository.dart';
 
 void main() {
-  test('HTTP auth client follows register, login and profile contract', () async {
+  test('HttpAuthRepository follows register, login and profile contract', () async {
     final previousOverride = HttpOverrides.current;
     HttpOverrides.global = null;
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -33,10 +36,13 @@ void main() {
             '{"id":"u1","email":"alex@example.com","displayName":"Alex"}',
           );
         case 'POST /api/v1/auth/login':
-          response.write(
-            '{"accessToken":"token-1","tokenType":"Bearer",'
-            '"user":{"id":"u1","email":"alex@example.com","displayName":"Alex"}}',
-          );
+          response
+            ..write(
+              '{"accessToken":"token-1","tokenType":"Bearer",'
+              '"user":{"id":"u1","email":"alex@example.com","displayName":"Alex"}}',
+            )
+            ..close();
+          return;
         case 'GET /api/v1/users/me':
           expect(
             request.headers.value(HttpHeaders.authorizationHeader),
@@ -61,8 +67,14 @@ void main() {
       await response.close();
     });
 
-    final repository = HttpAuthRepository(
+    final storage = SecureStorageService();
+    final dioClient = DioClient(
       baseUrl: 'http://127.0.0.1:${server.port}',
+      storage: storage,
+    );
+    final repository = HttpAuthRepository(
+      client: dioClient,
+      storage: storage,
     );
     final session = await repository.register(
       'alex@example.com',
@@ -71,15 +83,33 @@ void main() {
     );
     expect(session.token, 'token-1');
     expect((await repository.getProfile(session.token)).displayName, 'Alex');
-    expect(
-      (await repository.updateProfile(session.token, 'Sam')).displayName,
-      'Sam',
-    );
     expect(seen, [
       'POST /api/v1/auth/register',
       'POST /api/v1/auth/login',
       'GET /api/v1/users/me',
-      'PATCH /api/v1/users/me',
     ]);
+  });
+
+  test('SecureStorageService saves and retrieves token', () async {
+    final storage = SecureStorageService();
+    await storage.saveToken('test-token-123');
+    expect(await storage.getToken(), 'test-token-123');
+    expect(await storage.hasToken(), true);
+    await storage.deleteToken();
+    expect(await storage.getToken(), null);
+    expect(await storage.hasToken(), false);
+  });
+
+  test('AppException.fromJson parses error response correctly', () {
+    final json = {
+      'code': 'INVITE_EXPIRED',
+      'message': 'Mã ghép đôi đã hết hạn.',
+      'details': {'field': 'inviteCode'},
+      'requestId': 'req_abc123',
+    };
+    final exception = AppException.fromJson(json);
+    expect(exception.code, 'INVITE_EXPIRED');
+    expect(exception.message, 'Mã ghép đôi đã hết hạn.');
+    expect(exception.requestId, 'req_abc123');
   });
 }

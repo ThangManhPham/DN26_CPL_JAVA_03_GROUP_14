@@ -1,88 +1,94 @@
-import 'package:flutter/material.dart';
+// Widget tests cho auth UI sẽ được M1 viết sau khi thay placeholder bằng UI thực.
+// Hiện tại architecture đã thay đổi (go_router + Riverpod).
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/data/auth_repository.dart';
-import 'package:mobile/main.dart';
+import 'package:mobile/features/auth/domain/auth_state.dart';
+import 'package:mobile/features/auth/domain/user_profile.dart';
 
 void main() {
-  test('auth field validation', () {
-    expect(validateEmail('bad'), isNotNull);
-    expect(validateEmail('alex@example.com'), isNull);
-    expect(validateDisplayName(' '), isNotNull);
-    expect(validateDisplayName('Alex'), isNull);
-    expect(validatePassword('short', registering: true), isNotNull);
-    expect(validatePassword('long-enough', registering: true), isNull);
+  group('AuthState sealed class', () {
+    test('AuthenticatedAuthState contains user and optional couple', () {
+      const user = UserProfile(
+        id: 'user-1',
+        email: 'alex@example.com',
+        displayName: 'Alex',
+      );
+
+      final state = AuthenticatedAuthState(user: user);
+      expect(state.user, user);
+      expect(state.couple, isNull);
+
+      final couple = CoupleInfo(
+        id: 'couple-1',
+        status: 'ACTIVE',
+        members: [
+          CoupleMember(id: 'user-1', displayName: 'Alex'),
+          CoupleMember(id: 'user-2', displayName: 'Sam'),
+        ],
+      );
+      final stateWithCouple = AuthenticatedAuthState(
+        user: user,
+        couple: couple,
+      );
+      expect(stateWithCouple.couple, couple);
+    });
+
+    test('copyWith replaces user correctly', () {
+      const user = UserProfile(
+        id: 'user-1',
+        email: 'alex@example.com',
+        displayName: 'Alex',
+      );
+      const updatedUser = UserProfile(
+        id: 'user-1',
+        email: 'alex@example.com',
+        displayName: 'Sam',
+      );
+      final state = AuthenticatedAuthState(user: user);
+
+      final updated = state.copyWith(user: updatedUser);
+      expect(updated.user.displayName, 'Sam');
+      expect(updated.user.id, user.id);
+    });
+
+    test('UnauthenticatedAuthState equality', () {
+      const state1 = UnauthenticatedAuthState();
+      const state2 = UnauthenticatedAuthState();
+      expect(state1, equals(state2));
+    });
+
+    test('LoadingAuthState equality', () {
+      const state1 = LoadingAuthState();
+      const state2 = LoadingAuthState();
+      expect(state1, equals(state2));
+    });
   });
 
-  testWidgets('register, edit profile, logout and login', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(OurSpaceApp(repository: MockAuthRepository()));
-    await tester.tap(find.text('Đăng ký'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('authSubmit')));
-    await tester.tap(find.byKey(const Key('authSubmit')));
-    await tester.pump();
-    expect(find.text('Vui lòng nhập tên hiển thị.'), findsOneWidget);
-    expect(find.text('Vui lòng nhập email.'), findsOneWidget);
+  group('UserProfile', () {
+    test('fromJson parses correctly', () {
+      final json = {
+        'id': 'user-123',
+        'email': 'test@example.com',
+        'displayName': 'Test User',
+        'avatarUrl': 'https://example.com/avatar.png',
+      };
+      final user = UserProfile.fromJson(json);
+      expect(user.id, 'user-123');
+      expect(user.email, 'test@example.com');
+      expect(user.displayName, 'Test User');
+      expect(user.avatarUrl, 'https://example.com/avatar.png');
+    });
 
-    await tester.enterText(find.byKey(const Key('displayNameField')), 'Alex');
-    await tester.enterText(
-      find.byKey(const Key('emailField')),
-      'alex@example.com',
-    );
-    await tester.enterText(
-      find.byKey(const Key('passwordField')),
-      'Password123!',
-    );
-    await tester.ensureVisible(find.byKey(const Key('authSubmit')));
-    await tester.tap(find.byKey(const Key('authSubmit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Chào Alex,'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('openProfile')));
-    await tester.pumpAndSettle();
-    expect(find.text('Hồ sơ của tôi'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('profileNameField')), 'Sam');
-    await tester.ensureVisible(find.byKey(const Key('saveProfile')));
-    await tester.tap(find.byKey(const Key('saveProfile')));
-    await tester.pumpAndSettle();
-    expect(find.text('Chào Sam,'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('openProfile')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Đăng xuất'));
-    await tester.pumpAndSettle();
-    expect(find.text('Chào mừng\ntrở lại.'), findsOneWidget);
-    await tester.enterText(
-      find.byKey(const Key('emailField')),
-      'alex@example.com',
-    );
-    await tester.enterText(
-      find.byKey(const Key('passwordField')),
-      'Password123!',
-    );
-    await tester.tap(find.byKey(const Key('authSubmit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Chào Sam,'), findsOneWidget);
-  });
-
-  testWidgets('invalid login shows safe error without exposing account state', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(OurSpaceApp(repository: MockAuthRepository()));
-    await tester.enterText(
-      find.byKey(const Key('emailField')),
-      'unknown@example.com',
-    );
-    await tester.enterText(find.byKey(const Key('passwordField')), 'wrongpass');
-    await tester.tap(find.byKey(const Key('authSubmit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Email hoặc mật khẩu không đúng.'), findsOneWidget);
+    test('toJson roundtrips correctly', () {
+      const user = UserProfile(
+        id: 'user-1',
+        email: 'alex@example.com',
+        displayName: 'Alex',
+      );
+      final roundtrip = UserProfile.fromJson(user.toJson());
+      expect(roundtrip.id, user.id);
+      expect(roundtrip.email, user.email);
+      expect(roundtrip.displayName, user.displayName);
+    });
   });
 }

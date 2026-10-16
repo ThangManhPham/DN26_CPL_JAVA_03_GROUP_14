@@ -19,13 +19,16 @@ final secureStorageProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
 });
 
-final dioProvider = Provider<Dio>((ref) {
+final dioClientProvider = Provider<DioClient>((ref) {
   final storage = ref.watch(secureStorageProvider);
-  final client = DioClient(
+  return DioClient(
     baseUrl: AppConfig.apiBaseUrl,
     storage: storage,
   );
-  return client.dio;
+});
+
+final dioProvider = Provider<Dio>((ref) {
+  return ref.watch(dioClientProvider).dio;
 });
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -33,7 +36,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     return MockAuthRepository(storage: ref.watch(secureStorageProvider));
   }
   return HttpAuthRepository(
-    dio: ref.watch(dioProvider),
+    client: ref.watch(dioClientProvider),
     storage: ref.watch(secureStorageProvider),
   );
 });
@@ -51,6 +54,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         _storage = storage,
         _ref = ref,
         super(const LoadingAuthState()) {
+    // Register callback so 401 interceptor triggers state → Unauthenticated.
+    _storage.onTokenCleared = () {
+      state = const UnauthenticatedAuthState();
+    };
     _restoreSession();
   }
 

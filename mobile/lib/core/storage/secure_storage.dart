@@ -9,6 +9,9 @@ class SecureStorageService {
 
   static const _keyAccessToken = 'access_token';
 
+  /// Callback được gọi khi token bị xóa (401).
+  VoidCallback? onTokenCleared;
+
   Future<void> saveToken(String token) async {
     await _storage.write(key: _keyAccessToken, value: token);
   }
@@ -19,9 +22,12 @@ class SecureStorageService {
 
   Future<void> deleteToken() async {
     await _storage.delete(key: _keyAccessToken);
+    onTokenCleared?.call();
   }
 
   Future<bool> hasToken() async {
     return await getToken() != null;
   }
 }
+
+typedef VoidCallback = void Function();
