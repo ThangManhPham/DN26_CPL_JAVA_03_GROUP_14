@@ -4,7 +4,7 @@
 **Sprint:** 1 (Foundation & Couple Connection)  
 **Tasks:** S1-16, S1-17, S1-18, S1-19, S1-20  
 **Feature Branch:** `feature/S1-16-20-m4-pairing`  
-**Quality Status:** All 23 automated tests executed & PASSED (`mvn clean test`)
+**Quality Status:** All 50 automated tests (23 M4 + 27 M3) executed & PASSED (`mvn clean test`)
 
 ---
 
