@@ -5,13 +5,22 @@ spring:
     password: ${TEST_DATABASE_PASSWORD:}
   flyway:
     enabled: true
+    locations: classpath:db/h2-migration
   jpa:
     hibernate:
       ddl-auto: validate
+    show-sql: false
+
 app:
   jwt:
     # Test fixture only. Never use this signing key outside automated tests.
     secret: dGVzdC1vbmx5LXNlY3JldC1mb3Itb3Vyc3BhY2UtMzItYnl0ZXM=
+
+ourspace:
+  pairing:
+    invite-ttl-hours: 24
+    invite-code-length: 6
+
 logging:
   level:
     org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"

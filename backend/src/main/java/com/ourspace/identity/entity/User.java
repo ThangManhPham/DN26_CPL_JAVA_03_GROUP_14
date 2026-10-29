@@ -32,6 +32,8 @@ public class User {
         this.createdAt = Instant.now();
     }
     public UUID getId() { return id; }
+    public String getEmail() { return email; }
+    public String getDisplayName() { return displayName; }
     public String getPasswordHash() { return passwordHash; }
     public void setDisplayName(String value) { displayName = value; }
     public void setAvatarKey(String value) { avatarKey = value; }

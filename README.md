@@ -1,6 +1,6 @@
 # OurSpace — AI-Powered Couple App
 
-**Trạng thái:** Documentation v1.0 và Flutter UI/Auth/Profile Sprint 1 của M1. Backend và các phần việc thành viên khác chưa triển khai.
+**Trạng thái:** Documentation v1.0, Flutter UI/Auth/Profile Sprint 1 của M1, và Backend DB/Pairing Sprint 1 của M4. Các phần việc thành viên khác tiếp tục triển khai.
 **Kế hoạch:** 3 sprint × 4 tuần (dự kiến, ngày bắt đầu chưa xác định).  
 **Mục tiêu:** Xây dựng ứng dụng couple dành cho 2 người, có chia sẻ ảnh và widget kiểu Locket, nhật ký ảnh, kỷ niệm và 2 tính năng AI.
 
@@ -25,6 +25,7 @@ tại [M3 Sprint 1](docs/13-m3-sprint1-delivery.md). Các module khác vẫn the
 | [11 — Hướng dẫn báo cáo](docs/11-report-outline.md) | Báo cáo tổng và trách nhiệm 5 thành viên |
 | [12 — Quyết định còn mở](docs/12-open-decisions.md) | Các điều cần chốt, không giả định là đã quyết |
 | [13 — M1 Sprint 1 UI](docs/13-m1-sprint1-ui.md) | Screen flow, design tokens, API mapping và cách chạy Flutter |
+| [14 — M4 Sprint 1 Pairing](docs/14-m4-sprint1-backend-pairing.md) | ERD, Flyway migrations, Couple/Invite APIs, Concurrency & Security tests |
 
 ## Phạm vi đã thống nhất
 

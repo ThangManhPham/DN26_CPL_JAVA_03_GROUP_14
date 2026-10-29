@@ -209,6 +209,33 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+
+        String requestId = ErrorResponse.generateRequestId();
+        log.warn("Data integrity violation [requestId={}] for {}: {}", requestId, request.getRequestURI(), ex.getMessage());
+
+        if (ex.getMessage() != null && ex.getMessage().contains("uq_one_active_couple_per_user")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse(
+                            "ALREADY_PAIRED",
+                            "Người dùng đã thuộc về một cặp đôi đang hoạt động.",
+                            Map.of(),
+                            requestId
+                    ));
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        "DATA_CONFLICT",
+                        "Xung đột dữ liệu hoặc vi phạm ràng buộc cơ sở dữ liệu.",
+                        Map.of(),
+                        requestId
+                ));
+    }
+
     /**
      * Fallback for any unhandled unexpected exception (HTTP 500).
      * Server-side full stack trace is logged, but NO stack trace or internal

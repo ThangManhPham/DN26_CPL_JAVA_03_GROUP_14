@@ -6,6 +6,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
     show-sql: false
+  flyway:
+    locations: classpath:db/h2-migration
 
 # Flyway remains enabled and Hibernate validates its schema in dev as well.
 # If JWT_SECRET is absent in dev ONLY, an ephemeral key is generated at startup.
