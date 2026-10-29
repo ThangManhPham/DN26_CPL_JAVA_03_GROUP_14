@@ -62,6 +62,21 @@ Trạng thái implementation local của M3 (S1-11–15) và các phụ thuộc 
 
 ## 6.3 Sprint 2 — 5 Feature Owners
 
+### Việc chuyển tiếp từ Sprint 1 (ưu tiên trước feature mới)
+
+Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairing backend đã có; `flutter analyze`, 4 Flutter tests và 50 backend tests trên JDK 21 đều đạt. **Chưa đủ bằng chứng để đóng goal Sprint 1** vì app vẫn chỉ có Home placeholder, chưa có pairing UI/session persistence; endpoint unpair trả 501 theo OD-03. Backend tests dùng H2; môi trường Docker/PostgreSQL và E2E hai tài khoản chưa được xác minh trong lần rà soát này. Các mục dưới đây là carry-over, không phải tính năng Photo/Timeline mới.
+
+| ID | Ưu tiên | Owner | Việc còn thiếu | Tiêu chí hoàn thành |
+|---|---|---|---|---|
+| S2-C01 | P0 | M2 + M1 | Ghép UI Flutter với Auth API thật, lưu JWT an toàn và khôi phục phiên; xử lý 401/hết hạn | Đăng ký, đăng nhập, sửa profile qua backend thật; đóng/mở app vẫn giữ phiên hợp lệ; 401 đưa về Login và xóa token; widget/integration tests có đủ trạng thái lỗi/loading |
+| S2-C02 | P0 | M2 | Màn tạo/nhập mã mời, Couple Home và gọi 3 Pairing API | Hai tài khoản A/B trên hai phiên/thiết bị ghép đôi được; đăng nhập lại vẫn xem đúng couple; mã sai/hết hạn/đã dùng và tự ghép có thông báo đúng; có test và ảnh/log demo |
+| S2-C03 | P1, cần quyết định | M4 + cả nhóm | Chốt OD-03 về hủy ghép đôi và retention; hoàn thiện `DELETE /couples/me` hoặc điều chỉnh scope/contract một cách chính thức | Quyết định được ghi trong docs; API/UI xử lý nhất quán; TC-12 pass, không xóa dữ liệu ngoài policy đã duyệt |
+| S2-C04 | P0 | M5 + M3/M4 | CI và môi trường tích hợp PostgreSQL thật; runbook/demo Sprint 1 | Có workflow PR chạy backend tests + Flutter analyze/test; Compose khởi động DB/backend healthy trên máy mới; migrations V1–V3 chạy trên PostgreSQL; E2E TC-01–11 có bằng chứng. Nếu TC-12 chưa xong, ghi rõ ngoại lệ |
+| S2-C05 | P1 | M1 + M2 | Cấu hình base URL theo Android emulator, iOS Simulator và thiết bị thật; kiểm tra kết nối thực | iOS Simulator không dùng mặc định `10.0.2.2`; có hướng dẫn `--dart-define`/environment cho từng nền tảng; smoke Auth/Profile với API thật trên ít nhất một simulator |
+| S2-C06 | P1 | M5 + M3 | Khóa và ghi rõ JDK được hỗ trợ cho build/test | `pom.xml`, Docker và CI dùng cùng JDK đã kiểm chứng; runbook chỉ cách chọn JDK. Tránh chạy suite trên Java 26 với Byte Buddy hiện tại (5 Mockito tests lỗi khởi tạo, không phải assertion fail) hoặc nâng dependency tương thích rồi kiểm chứng lại |
+
+**Cổng vào Sprint 2 feature work:** C01, C02 và C04 cần hoàn tất hoặc có ngoại lệ được cả nhóm chấp nhận trước khi tuyên bố luồng couple đã tích hợp. C03 cần chốt policy trước khi triển khai unpair; không tự sửa dữ liệu/xóa couple khi chưa có quyết định. Các feature owner bên dưới vẫn giữ nguyên, nhưng nhóm cần điều chỉnh capacity theo carry-over này.
+
 | Member | Feature (chịu trách nhiệm end-to-end) | Scope hoàn thành để demo |
 |---|---|---|
 | **M1** | **Photo Sharing & Widget** | Camera/gallery, upload private ảnh, gửi tới couple, recent photo API, widget proof + notification cơ bản |

@@ -1,6 +1,17 @@
 name: ourspace
 
 services:
+  objectstore:
+    image: ghcr.io/chrislusf/seaweedfs@sha256:c2658820e763294a9e9de7b36c81e59b879e3459148351aee4e31a126ca64860
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      S3_BUCKET: ourspace-photos
+    ports:
+      - "127.0.0.1:9000:8333"
+    volumes:
+      - objectdata:/data
+
   db:
     image: postgres:17-alpine
     restart: unless-stopped
@@ -27,15 +38,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      objectstore:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-ourspace}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-ourspace}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Copy .env.example to .env and set DB_PASSWORD}
+      FLYWAY_LOCATIONS: classpath:db/migration
       SERVER_PORT: "8080"
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_ISSUER: ${JWT_ISSUER:-ourspace}
       JWT_TTL_SECONDS: ${JWT_TTL_SECONDS:-3600}
+      PHOTO_S3_ENDPOINT: http://objectstore:8333
+      PHOTO_S3_ACCESS_KEY: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      PHOTO_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      PHOTO_S3_BUCKET: ourspace-photos
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
     healthcheck:
@@ -47,3 +65,4 @@ services:
 
 volumes:
   pgdata:
+  objectdata:

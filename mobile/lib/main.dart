@@ -1,26 +1,47 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/auth_repository.dart';
+import 'data/photo_repository.dart';
+import 'photo_screen.dart';
 import 'theme.dart';
+import 'widget_bridge.dart';
 
 const _mock = bool.fromEnvironment('OURSPACE_USE_MOCK');
-const _baseUrl = String.fromEnvironment(
-  'OURSPACE_API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
-);
+const _configuredBaseUrl = String.fromEnvironment('OURSPACE_API_BASE_URL');
+String get _baseUrl => _configuredBaseUrl.isNotEmpty
+    ? _configuredBaseUrl
+    : Platform.isIOS
+    ? 'http://localhost:8080'
+    : 'http://10.0.2.2:8080';
 
-void main() => runApp(
-  OurSpaceApp(
-    repository: _mock
-        ? MockAuthRepository()
-        : HttpAuthRepository(baseUrl: _baseUrl),
-  ),
-);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Auth is memory-only until M2 adds secure session persistence. Never keep a
+  // partner photo on the launcher after a cold start with no authenticated user.
+  await WidgetBridge.clear();
+  runApp(
+    OurSpaceApp(
+      repository: _mock
+          ? MockAuthRepository()
+          : HttpAuthRepository(baseUrl: _baseUrl),
+      photoRepository: _mock
+          ? MockPhotoRepository()
+          : HttpPhotoRepository(baseUrl: _baseUrl),
+    ),
+  );
+}
 
 class OurSpaceApp extends StatefulWidget {
-  const OurSpaceApp({super.key, required this.repository});
+  const OurSpaceApp({
+    super.key,
+    required this.repository,
+    this.photoRepository,
+  });
   final AuthRepository repository;
+  final PhotoRepository? photoRepository;
   @override
   State<OurSpaceApp> createState() => _OurSpaceAppState();
 }
@@ -28,6 +49,8 @@ class OurSpaceApp extends StatefulWidget {
 class _OurSpaceAppState extends State<OurSpaceApp> {
   AuthSession? _session;
   bool _profile = false;
+  late final PhotoRepository _photos =
+      widget.photoRepository ?? MockPhotoRepository();
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -57,13 +80,18 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
               _session = _session!.withUser(user);
               _profile = false;
             }),
-            onLogout: () => setState(() {
-              _session = null;
-              _profile = false;
-            }),
+            onLogout: () {
+              WidgetBridge.clear();
+              setState(() {
+                _session = null;
+                _profile = false;
+              });
+            },
           )
         : HomeScreen(
             user: _session!.user,
+            token: _session!.token,
+            photos: _photos,
             onProfile: () => setState(() => _profile = true),
           ),
   );
@@ -273,8 +301,16 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.user, required this.onProfile});
+  const HomeScreen({
+    super.key,
+    required this.user,
+    required this.token,
+    required this.photos,
+    required this.onProfile,
+  });
   final UserProfile user;
+  final String token;
+  final PhotoRepository photos;
   final VoidCallback onProfile;
 
   @override
@@ -328,11 +364,26 @@ class HomeScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 12),
-                      const Text(
-                        'Khi hai bạn kết nối, những kỷ niệm chung sẽ xuất hiện ở đây.',
-                      ),
+                    const Text(
+                      'Khi hai bạn kết nối, những kỷ niệm chung sẽ xuất hiện ở đây.',
+                    ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                key: const Key('openPhotos'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PhotoScreen(
+                      repository: photos,
+                      token: token,
+                      userId: user.id,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.add_a_photo_outlined),
+                label: const Text('Ảnh của hai bạn'),
               ),
             ],
           ),

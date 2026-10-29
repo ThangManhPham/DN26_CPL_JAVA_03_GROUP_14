@@ -38,3 +38,4 @@ Desktop.ini
 !.env.example
 logs/
 
+.DS_Store
