@@ -1,6 +1,6 @@
 # 05. REST API Contract — Draft v1
 
-> **Contract đề xuất, chưa triển khai.** Owner frontend/backend chốt trước Week 2. Chuẩn cơ bản: JSON, UTF-8, HTTPS tại staging/prod, JWT Bearer cho các endpoint private, UUID dưới dạng string, thời gian UTC ISO-8601.
+> **Auth/Profile đã triển khai; các module còn lại là contract đề xuất.** Chuẩn cơ bản: JSON, UTF-8, HTTPS tại staging/prod, JWT Bearer cho các endpoint private, UUID dưới dạng string, thời gian UTC ISO-8601. Chi tiết bàn giao M3: [M3 Sprint 1](13-m3-sprint1-delivery.md).
 
 ## 5.1 Response & error convention
 
@@ -84,6 +84,7 @@ Response thành công thường trả resource trực tiếp; collections có `i
 ```
 
 ## 5.3 Sprint 2 — Photo & Timeline
+
 
 | Method | Path | Mục đích | Owner |
 |---|---|---|---|

@@ -9,6 +9,8 @@
 
 ## 6.2 Sprint 1 — Foundation & Couple Connection
 
+Trạng thái implementation local của M3 (S1-11–15) và các phụ thuộc bàn giao được ghi tại [M3 Sprint 1](13-m3-sprint1-delivery.md). Definition of Done vẫn yêu cầu PR/review/CI và bằng chứng demo.
+
 **Goal:** 2 tài khoản đăng ký, đăng nhập, chỉnh sửa profile, ghép đôi với nhau và nhìn thấy Couple Home; backend/database chạy cùng môi trường Docker; PR/test workflow hoạt động.
 
 | Task ID | Tuần | Owner | Task | Dependency / đầu ra |

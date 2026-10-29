@@ -1,18 +1,70 @@
 spring:
   application:
     name: ourspace-backend
-  profiles:
-    active: dev
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ourspace}
+    username: ${SPRING_DATASOURCE_USERNAME:ourspace}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
   jackson:
     property-naming-strategy: LOWER_CAMEL_CASE
     time-zone: UTC
+    deserialization:
+      fail-on-unknown-properties: true
     serialization:
       write-dates-as-timestamps: false
 
-server:
-  port: 8080
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    issuer: ${JWT_ISSUER:ourspace}
+    ttl-seconds: ${JWT_TTL_SECONDS:3600}
 
 ourspace:
   pairing:
     invite-ttl-hours: 24
     invite-code-length: 6
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    display-request-duration: true
+    operations-sorter: method
+    tags-sorter: alpha
+
+logging:
+  pattern:
+    level: "%5p [requestId=%X{requestId:-}]"
+  level:
+    root: INFO
+    com.ourspace: INFO
+    org.springframework.security: WARN
+    org.hibernate.orm.jdbc.bind: "OFF"
+    # Driver exception text may contain bound private values on constraint failures.
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
