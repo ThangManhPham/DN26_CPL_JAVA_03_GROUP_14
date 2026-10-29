@@ -1,0 +1,32 @@
+# OurSpace Backend -- .gitignore
+
+# ── Environment / Secrets ─────────────────────────────────────────────────────
+.env
+*.env
+!.env.example
+
+# ── Maven build output ────────────────────────────────────────────────────────
+target/
+*.jar
+*.war
+*.class
+
+# ── IDE files ─────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# ── OS files ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Spring Boot DevTools / generated files ───────────────────────────────────
+.mvn/timing.properties
+spring-devtools.properties

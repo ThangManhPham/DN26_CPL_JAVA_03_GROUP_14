@@ -17,6 +17,10 @@
 
 ## 12.2 Risk register
 
+Quyết định implementation local của M3 cho OD-04/OD-08: JWT HS256 mặc định 1 giờ,
+chưa refresh/revoke; validation 422, JSON hỏng/unknown fields 400; error codes ổn định.
+Chi tiết và giới hạn: [M3 Sprint 1](13-m3-sprint1-delivery.md). Nhóm cần review khi tích hợp.
+
 | Risk | Tác động | Mitigation |
 |---|---|---|
 | Widget iOS không cập nhật như kỳ vọng | Cao | Proof-of-concept sớm, fallback app feed, mô tả giới hạn OS |
