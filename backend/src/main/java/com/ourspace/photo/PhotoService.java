@@ -2,10 +2,13 @@ package com.ourspace.photo;
 
 import com.ourspace.common.exception.ApiException;
 import com.ourspace.pairing.repository.CoupleRepository;
+import com.ourspace.push.PhotoPushSender;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.UUID;
 import javax.imageio.ImageIO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,15 +16,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class PhotoService {
+    private static final Logger log = LoggerFactory.getLogger(PhotoService.class);
     private static final long MAX_BYTES = 10 * 1024 * 1024;
     private final PhotoRepository photos;
     private final CoupleRepository couples;
     private final PhotoStorage storage;
+    private final PhotoPushSender push;
 
-    public PhotoService(PhotoRepository photos, CoupleRepository couples, PhotoStorage storage) {
+    public PhotoService(PhotoRepository photos, CoupleRepository couples, PhotoStorage storage, PhotoPushSender push) {
         this.photos = photos;
         this.couples = couples;
         this.storage = storage;
+        this.push = push;
     }
 
     public PhotoResponse upload(UUID userId, UUID requestId, MultipartFile file) {
@@ -51,6 +57,11 @@ public class PhotoService {
             storage.put(key, bytes, mime);
             uploaded = true;
             var photo = photos.saveAndFlush(new Photo(id, couple.getId(), userId, requestId, key, mime, file.getSize()));
+            try {
+                push.photoShared(couple.getId(), userId, id);
+            } catch (RuntimeException ex) {
+                log.warn("Photo saved but push delivery could not be scheduled");
+            }
             return PhotoResponse.from(photo);
         } catch (DataIntegrityViolationException ex) {
             if (uploaded) deleteQuietly(key);

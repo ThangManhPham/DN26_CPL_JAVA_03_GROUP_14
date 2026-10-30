@@ -14,13 +14,15 @@ Run `docker compose up -d --build`, then run Flutter from `mobile/`. Register tw
 
 - M2: durable auth session and pairing UI. Without them, the photo screen needs a fresh login after an app restart, and pairing must be done through the API.
 - iOS WidgetKit extension is not part of this Android widget proof. It needs an Apple App Group/signing setup and physical-device verification.
-- Background push is a Sprint 3 integration task. The in-app notification above is not a push notification.
+- Firebase push registration and server sender are implemented, but off on the server until private credentials are configured. iOS delivery still needs APNs and physical-device testing. The 30-second in-app polling notice remains a fallback, not background push.
 
 ## Firebase setup for later push integration
 
 1. Create a Firebase project at the [Firebase console](https://console.firebase.google.com/). Keep project ownership under the team's Google account.
 2. From `mobile/`, run the [FlutterFire setup](https://firebase.google.com/docs/flutter/setup): install Firebase CLI, log in, activate FlutterFire CLI, then run `flutterfire configure`. Select Android and iOS. The package/bundle ID in this repo is `com.ourspace.mobile` on both platforms.
 3. For iOS push, a paid Apple Developer team, APNs authentication key, and a physical iPhone are required. In Xcode, enable Push Notifications and Background Modes (Background fetch and Remote notifications), then upload the APNs `.p8` key in Firebase Cloud Messaging settings. Follow the [FCM Flutter guide](https://firebase.google.com/docs/cloud-messaging/flutter/get-started).
-4. Send the Firebase project ID and confirm the Android/iOS app registrations. Do **not** send the APNs private key, service-account JSON or other secrets in chat or commit them to Git.
+4. The configured Firebase project is `ourspace-81e96`, and both app IDs match `com.ourspace.mobile`. Create a server service-account key only if needed, store it outside Git, and point `FIREBASE_SERVICE_ACCOUNT_FILE` to it for the optional Compose overlay. Do **not** send the APNs private key, service-account JSON or other secrets in chat or commit them to Git.
 
-Firebase configuration alone will not turn on push: the backend still needs device-token registration and a private server-side FCM sender. That work should be reviewed with M2's session lifecycle so logout/unpair revokes tokens correctly.
+The backend registers Firebase installation IDs after login and sends a generic alert after a photo is saved. M2's persistent session and logout/unpair lifecycle should be integrated before calling push production-ready.
+
+For the exact backend key and iOS APNs steps, see [Firebase push setup](15-firebase-push-setup.md).

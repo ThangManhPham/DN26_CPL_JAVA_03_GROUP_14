@@ -2,10 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'data/auth_repository.dart';
 import 'data/photo_repository.dart';
+import 'firebase_options.dart';
 import 'photo_screen.dart';
+import 'push_bridge.dart';
 import 'theme.dart';
 import 'widget_bridge.dart';
 
@@ -19,6 +23,15 @@ String get _baseUrl => _configuredBaseUrl.isNotEmpty
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final messengerKey = GlobalKey<ScaffoldMessengerState>();
+  PushBridge? push;
+  if (!_mock) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(_backgroundPushHandler);
+    push = PushBridge(baseUrl: _baseUrl, messengerKey: messengerKey);
+  }
   // Auth is memory-only until M2 adds secure session persistence. Never keep a
   // partner photo on the launcher after a cold start with no authenticated user.
   await WidgetBridge.clear();
@@ -30,8 +43,16 @@ Future<void> main() async {
       photoRepository: _mock
           ? MockPhotoRepository()
           : HttpPhotoRepository(baseUrl: _baseUrl),
+      push: push,
+      messengerKey: messengerKey,
     ),
   );
+}
+
+@pragma('vm:entry-point')
+Future<void> _backgroundPushHandler(RemoteMessage message) async {
+  // The notification payload is displayed by the OS. Do not fetch private
+  // photos here: the user may have logged out while the app was terminated.
 }
 
 class OurSpaceApp extends StatefulWidget {
@@ -39,9 +60,13 @@ class OurSpaceApp extends StatefulWidget {
     super.key,
     required this.repository,
     this.photoRepository,
+    this.push,
+    this.messengerKey,
   });
   final AuthRepository repository;
   final PhotoRepository? photoRepository;
+  final PushBridge? push;
+  final GlobalKey<ScaffoldMessengerState>? messengerKey;
   @override
   State<OurSpaceApp> createState() => _OurSpaceAppState();
 }
@@ -54,6 +79,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    scaffoldMessengerKey: widget.messengerKey,
     title: 'OurSpace',
     debugShowCheckedModeBanner: false,
     theme: ourSpaceTheme,
@@ -67,7 +93,10 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
     home: _session == null
         ? AuthScreen(
             repository: widget.repository,
-            onAuthenticated: (session) => setState(() => _session = session),
+            onAuthenticated: (session) {
+              setState(() => _session = session);
+              widget.push?.activate(session.token);
+            },
           )
         : _profile
         ? ProfileScreen(
@@ -81,6 +110,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
               _profile = false;
             }),
             onLogout: () {
+              widget.push?.deactivate(_session!.token);
               WidgetBridge.clear();
               setState(() {
                 _session = null;
