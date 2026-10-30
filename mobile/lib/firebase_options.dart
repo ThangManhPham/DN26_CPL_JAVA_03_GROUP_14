@@ -23,8 +23,6 @@ class DefaultFirebaseOptions {
       );
     }
     switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return android;
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
@@ -48,14 +46,6 @@ class DefaultFirebaseOptions {
         );
     }
   }
-
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCcmgB3SpEaKKe97mKo-T5rPl0UVd_PIBE',
-    appId: '1:896137981627:android:9827e70a50bf496633039e',
-    messagingSenderId: '896137981627',
-    projectId: 'ourspace-81e96',
-    storageBucket: 'ourspace-81e96.firebasestorage.app',
-  );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDjH5bbu6ce-q8KgcolRKej3kgJIieBjR8',

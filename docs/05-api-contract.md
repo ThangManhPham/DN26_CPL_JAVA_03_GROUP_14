@@ -92,7 +92,7 @@ Response thành công thường trả resource trực tiếp; collections có `i
 | POST | `/api/v1/photos` | `multipart/form-data`, field `file` (JPEG/PNG, 1 byte–10 MB), `Idempotency-Key: <UUID>` header, Bearer token | 201 `PhotoResponse`; same key by same sender returns same photo |
 | GET | `/api/v1/photos/latest` | Bearer token | 200 `PhotoResponse` for authenticated user's active couple, or 404 `PHOTO_NOT_FOUND` |
 | GET | `/api/v1/photos/{id}/image` | Bearer token | Image bytes with private/no-store cache header, or 404 for outsiders |
-| PUT | `/api/v1/devices/push-token` | Bearer token, JSON `{ "token": "<Firebase installation ID>", "platform": "android"\|"ios" }` | 204; register current device for generic photo alerts |
+| PUT | `/api/v1/devices/push-token` | Bearer token, JSON `{ "token": "<Firebase installation ID>", "platform": "ios" }` | 204; register current device for generic photo alerts |
 | DELETE | `/api/v1/devices/push-token` | Same authenticated JSON body | 204; remove only current user's device |
 
 `PhotoResponse` contains `id`, `coupleId`, `senderId`, `mimeType`, `sizeBytes`, `createdAt`, `imagePath`. `imagePath` is an **authenticated API path**, not a public object URL. Upload without an active couple returns 409 `COUPLE_REQUIRED`; unsupported or forged image format returns 400. Never send `storageKey` to clients. Photo content is stored in a private S3-compatible bucket (SeaweedFS in local Compose).

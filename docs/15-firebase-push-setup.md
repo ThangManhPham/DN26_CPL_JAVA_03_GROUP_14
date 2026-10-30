@@ -18,6 +18,6 @@ If you are running the backend outside Docker, set `GOOGLE_APPLICATION_CREDENTIA
 3. In Firebase Console → Project settings → **Cloud Messaging** → your iOS app → **APNs authentication key**, upload the `.p8` and enter Key ID and Team ID.
 4. Open `mobile/ios/Runner.xcworkspace` in Xcode. Select Runner → **Signing & Capabilities**: choose your Team, add **Push Notifications**, and ensure **Background Modes** has Background fetch and Remote notifications. Build/run on the physical iPhone, grant notification permission, and test with two paired accounts.
 
-Android testing needs an Android device or emulator with Google Play services. The API/device registration tests can run without either Apple or Google private keys; real delivery cannot.
+The API/device registration tests can run without Apple or Google private keys; real iPhone delivery cannot.
 
 Official references: [Firebase Admin SDK setup](https://firebase.google.com/docs/admin/setup), [FlutterFire setup](https://firebase.google.com/docs/flutter/setup), [FCM Flutter/iOS setup](https://firebase.google.com/docs/cloud-messaging/flutter/get-started).

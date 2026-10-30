@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,15 +9,12 @@ import 'firebase_options.dart';
 import 'photo_screen.dart';
 import 'push_bridge.dart';
 import 'theme.dart';
-import 'widget_bridge.dart';
 
 const _mock = bool.fromEnvironment('OURSPACE_USE_MOCK');
 const _configuredBaseUrl = String.fromEnvironment('OURSPACE_API_BASE_URL');
 String get _baseUrl => _configuredBaseUrl.isNotEmpty
     ? _configuredBaseUrl
-    : Platform.isIOS
-    ? 'http://localhost:8080'
-    : 'http://10.0.2.2:8080';
+    : 'http://localhost:8080';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,9 +27,7 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(_backgroundPushHandler);
     push = PushBridge(baseUrl: _baseUrl, messengerKey: messengerKey);
   }
-  // Auth is memory-only until M2 adds secure session persistence. Never keep a
-  // partner photo on the launcher after a cold start with no authenticated user.
-  await WidgetBridge.clear();
+  // Auth is memory-only until M2 adds secure session persistence.
   runApp(
     OurSpaceApp(
       repository: _mock
@@ -111,7 +104,6 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
             }),
             onLogout: () {
               widget.push?.deactivate(_session!.token);
-              WidgetBridge.clear();
               setState(() {
                 _session = null;
                 _profile = false;

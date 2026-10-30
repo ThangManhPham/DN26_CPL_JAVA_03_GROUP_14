@@ -61,7 +61,7 @@ class PushBridge {
             },
             body: jsonEncode({
               'token': deviceToken,
-              'platform': Platform.isIOS ? 'ios' : 'android',
+              'platform': 'ios',
             }),
           )
           .timeout(const Duration(seconds: 8));
@@ -105,7 +105,7 @@ class PushBridge {
             },
             body: jsonEncode({
               'token': deviceToken,
-              'platform': Platform.isIOS ? 'ios' : 'android',
+              'platform': 'ios',
             }),
           )
           .timeout(const Duration(seconds: 8));

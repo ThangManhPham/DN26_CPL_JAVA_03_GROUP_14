@@ -72,14 +72,14 @@ Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairin
 | S2-C02 | P0 | M2 | Màn tạo/nhập mã mời, Couple Home và gọi 3 Pairing API | Hai tài khoản A/B trên hai phiên/thiết bị ghép đôi được; đăng nhập lại vẫn xem đúng couple; mã sai/hết hạn/đã dùng và tự ghép có thông báo đúng; có test và ảnh/log demo |
 | S2-C03 | P1, cần quyết định | M4 + cả nhóm | Chốt OD-03 về hủy ghép đôi và retention; hoàn thiện `DELETE /couples/me` hoặc điều chỉnh scope/contract một cách chính thức | Quyết định được ghi trong docs; API/UI xử lý nhất quán; TC-12 pass, không xóa dữ liệu ngoài policy đã duyệt |
 | S2-C04 | P0 | M5 + M3/M4 | CI và môi trường tích hợp PostgreSQL thật; runbook/demo Sprint 1 | Có workflow PR chạy backend tests + Flutter analyze/test; Compose khởi động DB/backend healthy trên máy mới; migrations V1–V3 chạy trên PostgreSQL; E2E TC-01–11 có bằng chứng. Nếu TC-12 chưa xong, ghi rõ ngoại lệ |
-| S2-C05 | P1 | M1 + M2 | Cấu hình base URL theo Android emulator, iOS Simulator và thiết bị thật; kiểm tra kết nối thực | iOS Simulator không dùng mặc định `10.0.2.2`; có hướng dẫn `--dart-define`/environment cho từng nền tảng; smoke Auth/Profile với API thật trên ít nhất một simulator |
+| S2-C05 | P1 | M1 + M2 | Cấu hình base URL cho iOS Simulator và iPhone thật; kiểm tra kết nối thực | Có hướng dẫn `--dart-define`/environment cho hai môi trường; smoke Auth/Profile với API thật trên iOS Simulator |
 | S2-C06 | P1 | M5 + M3 | Khóa và ghi rõ JDK được hỗ trợ cho build/test | `pom.xml`, Docker và CI dùng cùng JDK đã kiểm chứng; runbook chỉ cách chọn JDK. Tránh chạy suite trên Java 26 với Byte Buddy hiện tại (5 Mockito tests lỗi khởi tạo, không phải assertion fail) hoặc nâng dependency tương thích rồi kiểm chứng lại |
 
 **Cổng vào Sprint 2 feature work:** C01, C02 và C04 cần hoàn tất hoặc có ngoại lệ được cả nhóm chấp nhận trước khi tuyên bố luồng couple đã tích hợp. C03 cần chốt policy trước khi triển khai unpair; không tự sửa dữ liệu/xóa couple khi chưa có quyết định. Các feature owner bên dưới vẫn giữ nguyên, nhưng nhóm cần điều chỉnh capacity theo carry-over này.
 
 | Member | Feature (chịu trách nhiệm end-to-end) | Scope hoàn thành để demo |
 |---|---|---|
-| **M1** | **Photo Sharing & Widget** | Camera/gallery, upload private ảnh, gửi tới couple, recent photo API, widget proof + notification cơ bản |
+| **M1** | **Photo Sharing & iOS WidgetKit** | Camera/gallery, upload private ảnh, gửi tới couple, recent photo API, notification cơ bản; WidgetKit là hạng mục chưa triển khai cần iPhone thật |
 | **M2** | **Timeline & Reactions** | Timeline pagination, photo detail, reaction API/UI, authorization, lỗi loading/empty |
 | **M3** | **Couple Space & Shared Calendar** | Love counter, anniversary, CRUD sự kiện couple, trang lịch chung |
 | **M4** | **Memory Albums** | Create/list album, add/remove photos, album detail, ownership rules |
@@ -93,13 +93,13 @@ Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairin
 - M4 quản lý album và liên kết Photo ID đã được kiểm tra cùng couple.
 - M5 chuẩn bị contract cho AI, nhưng demo Sprint 2 là planner thủ công, **không phụ thuộc AI**.
 
-**Sprint 2 Demo:** A gửi ảnh → B xem ảnh/widget (theo điều kiện OS), timeline/reaction; tạo sự kiện, album và date plan.
+**Sprint 2 Demo:** A gửi ảnh → B xem ảnh trong app, timeline/reaction; tạo sự kiện, album và date plan. WidgetKit chỉ đưa vào demo khi đã triển khai và kiểm chứng trên iPhone thật.
 
 ## 6.4 Sprint 3 — AI, Quality & Release
 
 | Member | Feature tiếp tục sở hữu | Sprint 3 deliverables |
 |---|---|---|
-| M1 | Photo Sharing & Widget | Retry upload, bảo vệ object, widget refresh best-effort, push integration, test thiết bị |
+| M1 | Photo Sharing & iOS WidgetKit | Retry upload, bảo vệ object, iOS widget refresh best-effort nếu hoàn thành, push integration, test iPhone thật |
 | M2 | Timeline & Reactions | Filter/search nếu kịp, index/pagination tuning, test permission/pagination |
 | M3 | Couple Space & Calendar | Nhắc ngày kỷ niệm, timezone, event notification (nếu kịp), acceptance test |
 | M4 | Album & AI Memory Story | Consent, AI generation draft, edit/save story, fallback và logging an toàn |
@@ -124,4 +124,4 @@ Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairin
 
 ## 6.7 Rủi ro về khối lượng
 
-M1 phụ trách widget là rủi ro kỹ thuật cao; cần proof-of-concept Android sớm và xác minh iOS trước khi hứa demo cross-platform. M4/M5 có AI cần chuẩn bị policy/SDK từ Sprint 2, nhưng không làm AI trước chức năng cơ bản. Nếu trễ, cắt filter nâng cao, reminder phức tạp và polish trước, không cắt pairing, photo sharing và authorization.
+M1 phụ trách iOS WidgetKit là rủi ro kỹ thuật cao; cần proof-of-concept và kiểm chứng iPhone thật trước khi hứa demo widget. M4/M5 có AI cần chuẩn bị policy/SDK từ Sprint 2, nhưng không làm AI trước chức năng cơ bản. Nếu trễ, cắt filter nâng cao, reminder phức tạp và polish trước, không cắt pairing, photo sharing và authorization.

@@ -34,11 +34,16 @@ class PushTokenIntegrationTest {
         User b = users.save(new User("push-b-" + UUID.randomUUID() + "@example.com", "hash", "Sam"));
         String authA = "Bearer " + jwt.issue(a.getId());
         String authB = "Bearer " + jwt.issue(b.getId());
-        String body = "{\"token\":\"some-device-registration-token-123456\",\"platform\":\"android\"}";
+        String body = "{\"token\":\"some-device-registration-token-123456\",\"platform\":\"ios\"}";
         mvc.perform(put("/api/v1/devices/push-token").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnauthorized());
         mvc.perform(put("/api/v1/devices/push-token").header(HttpHeaders.AUTHORIZATION, authA)
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNoContent());
+        assertThat(tokens.findByUserId(a.getId())).hasSize(1);
+        mvc.perform(put("/api/v1/devices/push-token").header(HttpHeaders.AUTHORIZATION, authA)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"another-device-registration-token-123456\",\"platform\":\"unsupported\"}"))
+                .andExpect(status().isUnprocessableEntity());
         assertThat(tokens.findByUserId(a.getId())).hasSize(1);
         mvc.perform(delete("/api/v1/devices/push-token").header(HttpHeaders.AUTHORIZATION, authB)
                 .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNoContent());

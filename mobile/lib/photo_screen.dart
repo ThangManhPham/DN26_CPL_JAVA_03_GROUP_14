@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'data/photo_repository.dart';
-import 'widget_bridge.dart';
 
 class PhotoScreen extends StatefulWidget {
   const PhotoScreen({
@@ -63,7 +62,6 @@ class _PhotoScreenState extends State<PhotoScreen> {
       final bytes = photo == null
           ? null
           : await widget.repository.image(widget.token, photo);
-      if (bytes != null) await WidgetBridge.showPhoto(bytes);
       if (mounted) {
         setState(() {
           _latest = photo;
@@ -159,7 +157,6 @@ class _PhotoScreenState extends State<PhotoScreen> {
         _requestId!,
       );
       final bytes = await widget.repository.image(widget.token, photo);
-      await WidgetBridge.showPhoto(bytes);
       if (mounted) {
         setState(() {
           _latest = photo;
