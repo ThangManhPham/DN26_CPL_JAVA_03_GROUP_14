@@ -15,6 +15,7 @@ import com.ourspace.pairing.repository.CoupleRepository;
 import com.ourspace.photo.Photo;
 import com.ourspace.photo.PhotoRepository;
 import com.ourspace.photo.PhotoResponse;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public class AlbumService {
 
         // If cover photo is provided, also add it to album_photos
         if (request.coverPhotoId() != null) {
-            albumPhotoRepository.save(new AlbumPhoto(new AlbumPhotoId(saved.getId(), request.coverPhotoId())));
+            albumPhotoRepository.save(new AlbumPhoto(new AlbumPhotoId(saved.getId(), request.coverPhotoId()), Instant.now()));
         }
 
         long count = albumPhotoRepository.countByIdAlbumId(saved.getId());
@@ -122,12 +123,12 @@ public class AlbumService {
 
     public AlbumResponse addPhotoToAlbum(UUID userId, UUID albumId, UUID photoId) {
         CoupleEntity couple = getActiveCouple(userId);
-        Album album = getAlbum(albumId, couple.getId());
+        Album album = getAlbumForUpdate(albumId, couple.getId());
         validatePhotoOwnership(photoId, couple.getId());
 
-        AlbumPhotoId linkId = new AlbumPhotoId(albumId, photoId);
-        if (!albumPhotoRepository.existsById(linkId)) {
-            albumPhotoRepository.save(new AlbumPhoto(linkId));
+        AlbumPhotoId albumPhotoId = new AlbumPhotoId(albumId, photoId);
+        if (!albumPhotoRepository.existsById(albumPhotoId)) {
+            albumPhotoRepository.save(new AlbumPhoto(albumPhotoId, Instant.now()));
         }
 
         if (album.getCoverPhotoId() == null) {
@@ -141,7 +142,7 @@ public class AlbumService {
 
     public AlbumResponse removePhotoFromAlbum(UUID userId, UUID albumId, UUID photoId) {
         CoupleEntity couple = getActiveCouple(userId);
-        Album album = getAlbum(albumId, couple.getId());
+        Album album = getAlbumForUpdate(albumId, couple.getId());
 
         AlbumPhotoId linkId = new AlbumPhotoId(albumId, photoId);
         if (albumPhotoRepository.existsById(linkId)) {
@@ -161,13 +162,13 @@ public class AlbumService {
 
     public AlbumResponse updateAlbum(UUID userId, UUID albumId, UpdateAlbumRequest request) {
         CoupleEntity couple = getActiveCouple(userId);
-        Album album = getAlbum(albumId, couple.getId());
+        Album album = getAlbumForUpdate(albumId, couple.getId());
 
         if (request.coverPhotoId() != null) {
             validatePhotoOwnership(request.coverPhotoId(), couple.getId());
-            AlbumPhotoId coverLinkId = new AlbumPhotoId(albumId, request.coverPhotoId());
-            if (!albumPhotoRepository.existsById(coverLinkId)) {
-                albumPhotoRepository.save(new AlbumPhoto(coverLinkId));
+            AlbumPhotoId linkId = new AlbumPhotoId(albumId, request.coverPhotoId());
+            if (!albumPhotoRepository.existsById(linkId)) {
+                albumPhotoRepository.save(new AlbumPhoto(linkId, Instant.now()));
             }
         }
 
@@ -201,12 +202,21 @@ public class AlbumService {
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.FORBIDDEN,
                         "NO_ACTIVE_COUPLE",
-                        "Bạn cần có một mối quan hệ cặp đôi đang hoạt động để truy cập album."
+                        "Bạn chưa tham gia vào cặp đôi nào đang hoạt động."
                 ));
     }
 
     private Album getAlbum(UUID albumId, UUID coupleId) {
         return albumRepository.findByIdAndCoupleId(albumId, coupleId)
+                .orElseThrow(() -> new ApiException(
+                        HttpStatus.NOT_FOUND,
+                        "ALBUM_NOT_FOUND",
+                        "Album không tồn tại hoặc bạn không có quyền truy cập."
+                ));
+    }
+
+    private Album getAlbumForUpdate(UUID albumId, UUID coupleId) {
+        return albumRepository.findByIdAndCoupleIdForUpdate(albumId, coupleId)
                 .orElseThrow(() -> new ApiException(
                         HttpStatus.NOT_FOUND,
                         "ALBUM_NOT_FOUND",
