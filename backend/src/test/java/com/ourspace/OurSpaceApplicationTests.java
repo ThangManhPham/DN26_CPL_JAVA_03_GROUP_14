@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OurSpaceApplicationTests {
     @Autowired Flyway flyway;
     @Test void contextLoadsWithRealMigrations() {
-        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("4");
+        assertThat(flyway.info().current().getVersion().toString()).isEqualTo("5");
         assertThat(flyway.info().pending()).isEmpty();
     }
 }

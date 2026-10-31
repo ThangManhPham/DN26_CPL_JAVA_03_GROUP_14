@@ -3,6 +3,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'album_list_screen.dart';
+import 'data/album_repository.dart';
 import 'data/auth_repository.dart';
 import 'data/photo_repository.dart';
 import 'firebase_options.dart';
@@ -38,6 +40,9 @@ Future<void> main() async {
       photoRepository: _mock
           ? MockPhotoRepository()
           : HttpPhotoRepository(baseUrl: _baseUrl),
+      albumRepository: _mock
+          ? MockAlbumRepository()
+          : HttpAlbumRepository(baseUrl: _baseUrl),
       push: push,
       messengerKey: messengerKey,
     ),
@@ -55,11 +60,13 @@ class OurSpaceApp extends StatefulWidget {
     super.key,
     required this.repository,
     this.photoRepository,
+    this.albumRepository,
     this.push,
     this.messengerKey,
   });
   final AuthRepository repository;
   final PhotoRepository? photoRepository;
+  final AlbumRepository? albumRepository;
   final PushBridge? push;
   final GlobalKey<ScaffoldMessengerState>? messengerKey;
   @override
@@ -71,6 +78,8 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
   bool _profile = false;
   late final PhotoRepository _photos =
       widget.photoRepository ?? MockPhotoRepository();
+  late final AlbumRepository _albums =
+      widget.albumRepository ?? MockAlbumRepository();
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -117,6 +126,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
             user: _session!.user,
             token: _session!.token,
             photos: _photos,
+            albums: _albums,
             onProfile: () => setState(() => _profile = true),
           ),
   );
@@ -331,11 +341,13 @@ class HomeScreen extends StatelessWidget {
     required this.user,
     required this.token,
     required this.photos,
+    required this.albums,
     required this.onProfile,
   });
   final UserProfile user;
   final String token;
   final PhotoRepository photos;
+  final AlbumRepository albums;
   final VoidCallback onProfile;
 
   @override
@@ -409,6 +421,22 @@ class HomeScreen extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.add_a_photo_outlined),
                 label: const Text('Ảnh của hai bạn'),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const Key('openAlbums'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => AlbumListScreen(
+                      albumRepository: albums,
+                      photoRepository: photos,
+                      token: token,
+                      userId: user.id,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: const Text('Album kỷ niệm'),
               ),
             ],
           ),
