@@ -12,7 +12,7 @@ Run `docker compose up -d --build`, then run Flutter from `mobile/`. Register tw
 ## Remaining integration dependencies
 
 - M2: durable auth session and pairing UI. Without them, the photo screen needs a fresh login after an app restart, and pairing must be done through the API.
-- iOS WidgetKit extension is not implemented yet. It needs an Apple App Group/signing setup and physical-device verification.
+- iOS WidgetKit extension caches the latest photo in App Group `group.com.ourspace.mobile`, refreshes after loading/sending, and clears on logout/cold start. It builds on the iOS Simulator. A physical iPhone still needs that App Group enabled for both targets in Xcode and device verification.
 - Firebase push registration and server sender are implemented, but off on the server until private credentials are configured. iOS delivery still needs APNs and physical-device testing. The 30-second in-app polling notice remains a fallback, not background push.
 
 ## Firebase setup for later push integration

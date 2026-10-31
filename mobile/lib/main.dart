@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'data/auth_repository.dart';
 import 'data/photo_repository.dart';
 import 'firebase_options.dart';
+import 'ios_widget_bridge.dart';
 import 'photo_screen.dart';
 import 'push_bridge.dart';
 import 'theme.dart';
@@ -28,6 +29,7 @@ Future<void> main() async {
     push = PushBridge(baseUrl: _baseUrl, messengerKey: messengerKey);
   }
   // Auth is memory-only until M2 adds secure session persistence.
+  await IosWidgetBridge.clear();
   runApp(
     OurSpaceApp(
       repository: _mock
@@ -104,6 +106,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
             }),
             onLogout: () {
               widget.push?.deactivate(_session!.token);
+              IosWidgetBridge.clear();
               setState(() {
                 _session = null;
                 _profile = false;

@@ -4,9 +4,11 @@ WORKDIR /workspace
 
 # Copy the descriptor first so dependency downloads can be cached between builds.
 COPY pom.xml ./
-RUN mvn --batch-mode --no-transfer-progress dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn --batch-mode --no-transfer-progress dependency:go-offline
 COPY src ./src
-RUN mvn --batch-mode --no-transfer-progress package
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn --batch-mode --no-transfer-progress package
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 RUN apk add --no-cache curl && addgroup -S app && adduser -S -u 10001 -G app app

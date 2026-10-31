@@ -16,7 +16,7 @@ If you are running the backend outside Docker, set `GOOGLE_APPLICATION_CREDENTIA
 1. Ensure you have an Apple Developer team and a **physical iPhone** signed into it. The iOS Simulator can build the app, but it is not the acceptance test for Firebase push.
 2. In [Apple Developer Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/), register/configure App ID `com.ourspace.mobile`, enable Push Notifications, then create an **APNs Auth Key**. Download the `.p8` once; note its Key ID and your Team ID. Keep the `.p8` private and outside Git.
 3. In Firebase Console → Project settings → **Cloud Messaging** → your iOS app → **APNs authentication key**, upload the `.p8` and enter Key ID and Team ID.
-4. Open `mobile/ios/Runner.xcworkspace` in Xcode. Select Runner → **Signing & Capabilities**: choose your Team, add **Push Notifications**, and ensure **Background Modes** has Background fetch and Remote notifications. Build/run on the physical iPhone, grant notification permission, and test with two paired accounts.
+4. Open `mobile/ios/Runner.xcworkspace` in Xcode. Select Runner → **Signing & Capabilities**: choose your Team, add **Push Notifications**, and ensure **Background Modes** has Background fetch and Remote notifications. For WidgetKit, select both Runner and OurSpaceWidget targets and enable the shared App Group `group.com.ourspace.mobile`. Build/run on the physical iPhone, grant notification permission, and test with two paired accounts.
 
 The API/device registration tests can run without Apple or Google private keys; real iPhone delivery cannot.
 

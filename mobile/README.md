@@ -23,8 +23,11 @@ authenticated endpoint. The Photos screen polls every 30 seconds while open.
 When a new partner photo arrives, it shows an in-app
 notification. Firebase Messaging registers a device after login and handles
 generic photo alerts when configured server-side; see the Sprint 2 handoff.
-Logout unregisters the device. iOS WidgetKit is not yet enabled; iOS push
-still requires APNs setup and a physical-device test.
+Logout unregisters the device and clears the iOS WidgetKit image. WidgetKit
+shows the latest cached photo after it is loaded or sent in-app. The project
+uses App Group `group.com.ourspace.mobile`; select the same App Group for both
+Runner and OurSpaceWidget in Xcode before signing on an iPhone. iOS push still
+requires APNs setup and a physical-device test.
 
 This client does not yet persist tokens across app restarts; that is S1-07
 (M2). The authenticated Home is a placeholder for S1-09 (M2).
