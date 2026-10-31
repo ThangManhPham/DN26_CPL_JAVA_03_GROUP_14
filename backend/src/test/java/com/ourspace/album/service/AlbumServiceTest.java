@@ -75,6 +75,31 @@ class AlbumServiceTest {
     }
 
     @Test
+    @DisplayName("listAlbums sử dụng batch count query để tránh N+1")
+    void listAlbums_usesBatchCountQuery() {
+        UUID album1Id = UUID.randomUUID();
+        UUID album2Id = UUID.randomUUID();
+        Album a1 = new Album(album1Id, coupleId, "Album 1", "Mô tả 1", null, userId);
+        Album a2 = new Album(album2Id, coupleId, "Album 2", "Mô tả 2", null, userId);
+
+        when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.of(couple));
+        when(albumRepository.findByCoupleIdOrderByCreatedAtDesc(coupleId)).thenReturn(List.of(a1, a2));
+        when(albumPhotoRepository.countPhotosByAlbumIds(any())).thenReturn(List.of(
+                new Object[]{album1Id, 5L},
+                new Object[]{album2Id, 12L}
+        ));
+
+        List<AlbumResponse> results = albumService.listAlbums(userId);
+
+        assertThat(results).hasSize(2);
+        assertThat(results.get(0).photoCount()).isEqualTo(5);
+        assertThat(results.get(1).photoCount()).isEqualTo(12);
+
+        verify(albumPhotoRepository, times(1)).countPhotosByAlbumIds(any());
+        verify(albumPhotoRepository, never()).countByIdAlbumId(any());
+    }
+
+    @Test
     @DisplayName("Tạo album thất bại khi người dùng chưa ghép đôi")
     void createAlbum_noActiveCouple() {
         when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.empty());

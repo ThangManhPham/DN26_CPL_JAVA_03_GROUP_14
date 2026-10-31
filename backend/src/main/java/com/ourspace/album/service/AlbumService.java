@@ -74,10 +74,20 @@ public class AlbumService {
     public List<AlbumResponse> listAlbums(UUID userId) {
         CoupleEntity couple = getActiveCouple(userId);
         List<Album> albums = albumRepository.findByCoupleIdOrderByCreatedAtDesc(couple.getId());
+        if (albums.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<UUID> albumIds = albums.stream().map(Album::getId).toList();
+        Map<UUID, Long> countMap = albumPhotoRepository.countPhotosByAlbumIds(albumIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (UUID) row[0],
+                        row -> ((Number) row[1]).longValue()
+                ));
 
         return albums.stream()
                 .map(album -> {
-                    long count = albumPhotoRepository.countByIdAlbumId(album.getId());
+                    long count = countMap.getOrDefault(album.getId(), 0L);
                     return AlbumResponse.from(album, count);
                 })
                 .toList();
