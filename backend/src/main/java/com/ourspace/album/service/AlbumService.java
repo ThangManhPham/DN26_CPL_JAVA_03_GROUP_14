@@ -155,6 +155,10 @@ public class AlbumService {
 
         if (request.coverPhotoId() != null) {
             validatePhotoOwnership(request.coverPhotoId(), couple.getId());
+            AlbumPhotoId coverLinkId = new AlbumPhotoId(albumId, request.coverPhotoId());
+            if (!albumPhotoRepository.existsById(coverLinkId)) {
+                albumPhotoRepository.save(new AlbumPhoto(coverLinkId));
+            }
         }
 
         album.setTitle(request.title().trim());
