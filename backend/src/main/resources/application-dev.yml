@@ -7,7 +7,7 @@ spring:
   jpa:
     show-sql: false
   flyway:
-    locations: classpath:db/h2-migration
+    locations: ${FLYWAY_LOCATIONS:classpath:db/h2-migration}
 
 # Flyway remains enabled and Hibernate validates its schema in dev as well.
 # If JWT_SECRET is absent in dev ONLY, an ephemeral key is generated at startup.
@@ -16,3 +16,9 @@ management:
   endpoint:
     health:
       show-details: always
+ourspace:
+  photos:
+    s3:
+      endpoint: ${PHOTO_S3_ENDPOINT:http://localhost:9000}
+      access-key: ${PHOTO_S3_ACCESS_KEY:minioadmin}
+      secret-key: ${PHOTO_S3_SECRET_KEY:minioadmin}

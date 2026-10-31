@@ -4,7 +4,7 @@
 
 | ID | Vấn đề | Đề xuất mặc định | Deadline |
 |---|---|---|---|
-| OD-01 | Platform ưu tiên demo | Android first; iOS kiểm chứng widget tùy thiết bị | Week 1 |
+| OD-01 | Platform ưu tiên demo | Đã chốt iOS-only; iOS widget cần kiểm chứng trên iPhone thật | Đã chốt |
 | OD-02 | File/image storage | Chọn một private object storage adapter, tránh public URLs | Week 1–2 |
 | OD-03 | Khi unpair giữ/xóa album, ảnh, plans thế nào? | Thiết kế consent, retention và user-facing warning trước implementation | Week 1 |
 | OD-04 | JWT/session/refresh policy | JWT access token ngắn hạn; refresh/revoke quyết định chính thức | Week 1 |
@@ -40,5 +40,5 @@ Feature mới muốn thêm phải có owner, tác động dependency và feature
 
 - Tên thật 5 thành viên và leader/scrum facilitator.
 - Ngày bắt đầu/kết thúc thực tế và thời gian rảnh mỗi người.
-- Ưu tiên Android-only hay Android+iOS có test thiết bị thật.
+- iOS WidgetKit và push/APNs cần iPhone thật để kiểm chứng; chưa được coi là hoàn thành.
 - Chi phí hosting/storage/AI, choice provider và chính sách retention.

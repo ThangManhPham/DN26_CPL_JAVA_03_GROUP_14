@@ -7,7 +7,7 @@
 ```mermaid
 flowchart TD
   A[Flutter Mobile App] -->|REST over HTTPS| B[Spring Boot API]
-  A --> W[Android Home Widget / iOS WidgetKit]
+  A --> W[iOS WidgetKit — planned]
   B --> AUTH[Auth + Users + Pairing]
   B --> PHOTO[Photos + Timeline + Albums]
   B --> CAL[Couple Calendar + Plans]
@@ -23,14 +23,14 @@ flowchart TD
   A -.local data & refresh.-> W
 ```
 
-**Quan trọng:** Push không đồng nghĩa widget cập nhật tức thì. Widget trên từng OS cần implementation native và sẽ bị giới hạn tần suất/cơ chế refresh.
+**Quan trọng:** Push không đồng nghĩa widget cập nhật tức thì. iOS WidgetKit cần implementation native và chịu giới hạn refresh của iOS.
 
 ## 3.2 Technology stack dự kiến
 
 | Layer | Công nghệ | Mục đích |
 |---|---|---|
-| Client | Flutter / Dart | Mobile app cross-platform |
-| Widget | Android native widget; iOS WidgetKit via bridge | Ảnh màn hình chính |
+| Client | Flutter / Dart | Ứng dụng iOS |
+| Widget | iOS WidgetKit (chưa triển khai) | Ảnh màn hình chính |
 | API | Java + Spring Boot | Auth, business logic, AI orchestration |
 | Security | Spring Security + JWT | Authentication/authorization |
 | Database | PostgreSQL + Spring Data JPA | Dữ liệu nghiệp vụ |
@@ -41,7 +41,7 @@ flowchart TD
 | Local env | Docker Compose | Backend, DB, optional local storage |
 | CI | GitHub Actions | Build, tests, checks |
 
-**Không khóa version bằng tài liệu này:** chốt JDK/Gradle/Maven, Flutter SDK, PostgreSQL image tag tại kickoff, đưa vào build/config để 5 máy giống nhau.
+**Không khóa version bằng tài liệu này:** chốt JDK/Maven, Flutter SDK, PostgreSQL image tag tại kickoff, đưa vào build/config để 5 máy giống nhau.
 
 ## 3.3 Domain boundaries và owners
 

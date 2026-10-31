@@ -1,26 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'data/auth_repository.dart';
+import 'data/photo_repository.dart';
+import 'firebase_options.dart';
+import 'ios_widget_bridge.dart';
+import 'photo_screen.dart';
+import 'push_bridge.dart';
 import 'theme.dart';
 
 const _mock = bool.fromEnvironment('OURSPACE_USE_MOCK');
-const _baseUrl = String.fromEnvironment(
-  'OURSPACE_API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8080',
-);
+const _configuredBaseUrl = String.fromEnvironment('OURSPACE_API_BASE_URL');
+String get _baseUrl => _configuredBaseUrl.isNotEmpty
+    ? _configuredBaseUrl
+    : 'http://localhost:8080';
 
-void main() => runApp(
-  OurSpaceApp(
-    repository: _mock
-        ? MockAuthRepository()
-        : HttpAuthRepository(baseUrl: _baseUrl),
-  ),
-);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final messengerKey = GlobalKey<ScaffoldMessengerState>();
+  PushBridge? push;
+  if (!_mock) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FirebaseMessaging.onBackgroundMessage(_backgroundPushHandler);
+    push = PushBridge(baseUrl: _baseUrl, messengerKey: messengerKey);
+  }
+  // Auth is memory-only until M2 adds secure session persistence.
+  await IosWidgetBridge.clear();
+  runApp(
+    OurSpaceApp(
+      repository: _mock
+          ? MockAuthRepository()
+          : HttpAuthRepository(baseUrl: _baseUrl),
+      photoRepository: _mock
+          ? MockPhotoRepository()
+          : HttpPhotoRepository(baseUrl: _baseUrl),
+      push: push,
+      messengerKey: messengerKey,
+    ),
+  );
+}
+
+@pragma('vm:entry-point')
+Future<void> _backgroundPushHandler(RemoteMessage message) async {
+  // The notification payload is displayed by the OS. Do not fetch private
+  // photos here: the user may have logged out while the app was terminated.
+}
 
 class OurSpaceApp extends StatefulWidget {
-  const OurSpaceApp({super.key, required this.repository});
+  const OurSpaceApp({
+    super.key,
+    required this.repository,
+    this.photoRepository,
+    this.push,
+    this.messengerKey,
+  });
   final AuthRepository repository;
+  final PhotoRepository? photoRepository;
+  final PushBridge? push;
+  final GlobalKey<ScaffoldMessengerState>? messengerKey;
   @override
   State<OurSpaceApp> createState() => _OurSpaceAppState();
 }
@@ -28,9 +69,12 @@ class OurSpaceApp extends StatefulWidget {
 class _OurSpaceAppState extends State<OurSpaceApp> {
   AuthSession? _session;
   bool _profile = false;
+  late final PhotoRepository _photos =
+      widget.photoRepository ?? MockPhotoRepository();
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    scaffoldMessengerKey: widget.messengerKey,
     title: 'OurSpace',
     debugShowCheckedModeBanner: false,
     theme: ourSpaceTheme,
@@ -44,7 +88,10 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
     home: _session == null
         ? AuthScreen(
             repository: widget.repository,
-            onAuthenticated: (session) => setState(() => _session = session),
+            onAuthenticated: (session) {
+              setState(() => _session = session);
+              widget.push?.activate(session.token);
+            },
           )
         : _profile
         ? ProfileScreen(
@@ -57,13 +104,19 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
               _session = _session!.withUser(user);
               _profile = false;
             }),
-            onLogout: () => setState(() {
-              _session = null;
-              _profile = false;
-            }),
+            onLogout: () {
+              widget.push?.deactivate(_session!.token);
+              IosWidgetBridge.clear();
+              setState(() {
+                _session = null;
+                _profile = false;
+              });
+            },
           )
         : HomeScreen(
             user: _session!.user,
+            token: _session!.token,
+            photos: _photos,
             onProfile: () => setState(() => _profile = true),
           ),
   );
@@ -273,8 +326,16 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.user, required this.onProfile});
+  const HomeScreen({
+    super.key,
+    required this.user,
+    required this.token,
+    required this.photos,
+    required this.onProfile,
+  });
   final UserProfile user;
+  final String token;
+  final PhotoRepository photos;
   final VoidCallback onProfile;
 
   @override
@@ -328,11 +389,26 @@ class HomeScreen extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 12),
-                      const Text(
-                        'Khi hai bạn kết nối, những kỷ niệm chung sẽ xuất hiện ở đây.',
-                      ),
+                    const Text(
+                      'Khi hai bạn kết nối, những kỷ niệm chung sẽ xuất hiện ở đây.',
+                    ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                key: const Key('openPhotos'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PhotoScreen(
+                      repository: photos,
+                      token: token,
+                      userId: user.id,
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.add_a_photo_outlined),
+                label: const Text('Ảnh của hai bạn'),
               ),
             ],
           ),

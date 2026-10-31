@@ -19,12 +19,12 @@ OurSpace là ứng dụng mobile riêng tư dành cho hai người yêu nhau. S�
 
 | Thuộc tính | Định hướng |
 |---|---|
-| Nền tảng | Flutter mobile; Android-first được đề xuất, iOS cần kiểm chứng widget |
+| Nền tảng | Flutter mobile cho iOS; iOS WidgetKit cần kiểm chứng trên iPhone thật |
 | Backend | Java Spring Boot modular monolith |
 | Database | PostgreSQL + Flyway |
 | Auth | Spring Security + JWT |
 | Media | Private object storage (provider chưa chốt) |
-| Push/Widget | Firebase Cloud Messaging + widget native mỗi hệ điều hành |
+| Push/Widget | Firebase Cloud Messaging/APNs + iOS WidgetKit (chưa triển khai) |
 | AI | Hosted AI API gọi từ backend, không tự train model |
 | Môi trường | Docker Compose, GitHub, GitHub Actions |
 
@@ -202,7 +202,7 @@ Mỗi member chuẩn bị: use case, UI flow, data model, endpoints, Flutter+Bac
 
 | Chủ đề | Hành động |
 |---|---|
-| Widget iOS / cập nhật không realtime | Proof-of-concept sớm; Android-first là phương án giảm rủi ro |
+| Widget iOS / cập nhật không realtime | Proof-of-concept trên iPhone thật; không hứa refresh tức thì |
 | Storage media | Chọn private storage/short-lived URL; test permission |
 | Unpairing và retention | Chốt policy giữ/xóa dữ liệu trước Sprint 1 Week 3 |
 | JWT/session | Chốt token lifetime/refresh/revocation ở Week 1 |
