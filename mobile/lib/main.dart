@@ -28,8 +28,8 @@ Future<void> main() async {
     FirebaseMessaging.onBackgroundMessage(_backgroundPushHandler);
     push = PushBridge(baseUrl: _baseUrl, messengerKey: messengerKey);
   }
-  // Auth is memory-only until M2 adds secure session persistence.
-  await IosWidgetBridge.clear();
+  // Auth is memory-only until M2 adds secure session persistence. The widget
+  // cache deliberately survives an app restart and is cleared only on logout.
   runApp(
     OurSpaceApp(
       repository: _mock

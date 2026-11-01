@@ -34,9 +34,8 @@ struct PhotoProvider: TimelineProvider {
 struct OurSpaceWidgetView: View {
   let entry: PhotoEntry
 
-  var body: some View {
+  private var content: some View {
     ZStack {
-      Color(red: 0.99, green: 0.91, blue: 0.93)
       if let image = entry.image {
         Image(uiImage: image).resizable().scaledToFill()
       } else {
@@ -46,7 +45,16 @@ struct OurSpaceWidgetView: View {
         }
       }
     }
-    .background(Color(red: 0.99, green: 0.91, blue: 0.93))
+  }
+
+  var body: some View {
+    if #available(iOSApplicationExtension 17.0, *) {
+      content.containerBackground(for: .widget) {
+        Color(red: 0.99, green: 0.91, blue: 0.93)
+      }
+    } else {
+      content.background(Color(red: 0.99, green: 0.91, blue: 0.93))
+    }
   }
 }
 
