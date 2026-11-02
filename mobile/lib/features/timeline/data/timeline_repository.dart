@@ -88,8 +88,15 @@ class MockTimelineRepository implements TimelineRepository {
   bool failReaction;
 
   final String Function() _currentUserId;
-  final Map<String, List<PhotoReaction>> _reactions = {};
   int _pageCalls = 0;
+
+  /// Dùng static để chia sẻ reaction giữa các instance trong cùng runtime.
+  static final Map<String, List<PhotoReaction>> _reactions = {};
+
+  /// Xóa toàn bộ dữ liệu mock (dùng cho test).
+  static void clear() {
+    _reactions.clear();
+  }
 
   static const String partnerId = 'mock-partner';
   static const String partnerName = 'Người ấy';

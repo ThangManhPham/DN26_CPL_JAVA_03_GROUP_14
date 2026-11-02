@@ -9,14 +9,17 @@ MockTimelineRepository buildRepository({
   MockTimelineScenario scenario = MockTimelineScenario.success,
   bool failReaction = false,
   int? failOnPageCall,
-}) => MockTimelineRepository(
-  photoCount: photoCount,
-  latency: Duration.zero,
-  scenario: scenario,
-  failReaction: failReaction,
-  failOnPageCall: failOnPageCall,
-  currentUserId: () => 'mock-me',
-);
+}) {
+  MockTimelineRepository.clear();
+  return MockTimelineRepository(
+    photoCount: photoCount,
+    latency: Duration.zero,
+    scenario: scenario,
+    failReaction: failReaction,
+    failOnPageCall: failOnPageCall,
+    currentUserId: () => 'mock-me',
+  );
+}
 
 void main() {
   test('phân trang theo cursor: nạp trang đầu rồi nạp thêm tới hết dữ liệu', () async {

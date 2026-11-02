@@ -5,18 +5,20 @@ import 'package:mobile/core/storage/token_storage.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 
 /// Hai tài khoản A/B giống `main.dart` khi chạy mock.
-MockAuthRepository seededAuthRepository() =>
-    MockAuthRepository(latency: Duration.zero)
-      ..seed(
-        email: 'alex@ourspace.dev',
-        password: 'Password123!',
-        displayName: 'Alex',
-      )
-      ..seed(
-        email: 'sam@ourspace.dev',
-        password: 'Password123!',
-        displayName: 'Sam',
-      );
+MockAuthRepository seededAuthRepository() {
+  MockAuthRepository.clear();
+  return MockAuthRepository(latency: Duration.zero)
+    ..seed(
+      email: 'alex@ourspace.dev',
+      password: 'Password123!',
+      displayName: 'Alex',
+    )
+    ..seed(
+      email: 'sam@ourspace.dev',
+      password: 'Password123!',
+      displayName: 'Sam',
+    );
+}
 
 void main() {
   test('login lưu token, tạo phiên và đồng bộ token sang HTTP client', () async {

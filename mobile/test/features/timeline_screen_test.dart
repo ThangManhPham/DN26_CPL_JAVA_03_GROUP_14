@@ -9,13 +9,16 @@ MockTimelineRepository buildRepository({
   Duration latency = Duration.zero,
   MockTimelineScenario scenario = MockTimelineScenario.success,
   bool failReaction = false,
-}) => MockTimelineRepository(
-  photoCount: photoCount,
-  latency: latency,
-  scenario: scenario,
-  failReaction: failReaction,
-  currentUserId: () => 'mock-me',
-);
+}) {
+  MockTimelineRepository.clear();
+  return MockTimelineRepository(
+    photoCount: photoCount,
+    latency: latency,
+    scenario: scenario,
+    failReaction: failReaction,
+    currentUserId: () => 'mock-me',
+  );
+}
 
 Widget wrap(Widget child) => MaterialApp(theme: ourSpaceTheme, home: child);
 

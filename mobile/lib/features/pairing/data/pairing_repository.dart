@@ -68,13 +68,31 @@ class MockCoupleRepository implements CoupleRepository {
 
   final UserProfile? Function() currentUser;
   final Duration latency;
-  final Set<String> _consumedCodes = <String>{};
-  final Map<String, Couple> _coupleByUserId = <String, Couple>{};
-  String? _inviteCode;
-  String? _inviteOwnerId;
-  String? _inviteOwnerName;
-  DateTime? _inviteExpiresAt;
-  int _coupleSequence = 0;
+
+  /// Dùng static để chia sẻ trạng thái giữa các instance trong cùng runtime
+  /// (ví dụ: khi logout/login lại hoặc trong widget test).
+  ///
+  /// LƯU Ý: Trên Web, các tab khác nhau chạy trong các process riêng biệt nên
+  /// không chia sẻ static memory. Để test ghép đôi giữa 2 cửa sổ trình duyệt,
+  /// hãy sử dụng một tab duy nhất (Tạo mã -> Logout -> Login tài khoản khác -> Nhập mã).
+  static final Set<String> _consumedCodes = <String>{};
+  static final Map<String, Couple> _coupleByUserId = <String, Couple>{};
+  static String? _inviteCode;
+  static String? _inviteOwnerId;
+  static String? _inviteOwnerName;
+  static DateTime? _inviteExpiresAt;
+  static int _coupleSequence = 0;
+
+  /// Xóa toàn bộ dữ liệu mock (dùng cho test).
+  static void clear() {
+    _consumedCodes.clear();
+    _coupleByUserId.clear();
+    _inviteCode = null;
+    _inviteOwnerId = null;
+    _inviteOwnerName = null;
+    _inviteExpiresAt = null;
+    _coupleSequence = 0;
+  }
 
   @override
   Future<CoupleInvite> createInvite() async {
@@ -111,7 +129,7 @@ class MockCoupleRepository implements CoupleRepository {
     }
 
     if (_consumedCodes.contains(code) || code != _inviteCode) {
-      throw _error(400, 'INVALID_INVITE_CODE', 'Mã ghép đôi không tồn tại hoặc đã được sử dụng.');
+      throw _error(400, 'INVALID_INVITE_CODE', 'Mã ghép đôi không đúng hoặc đã được sử dụng.');
     }
     if (_inviteExpiresAt == null || _inviteExpiresAt!.isBefore(DateTime.now().toUtc())) {
       _consumedCodes.add(code);

@@ -76,8 +76,16 @@ class MockAuthRepository implements AuthRepository {
   MockAuthRepository({this.latency = const Duration(milliseconds: 350)});
 
   final Duration latency;
-  final Map<String, ({String password, UserProfile user})> _users = {};
-  int _sequence = 0;
+
+  /// Dùng static để chia sẻ tài khoản giữa các instance (logout/login).
+  static final Map<String, ({String password, UserProfile user})> _users = {};
+  static int _sequence = 0;
+
+  /// Xóa toàn bộ dữ liệu mock (dùng cho test).
+  static void clear() {
+    _users.clear();
+    _sequence = 0;
+  }
 
   /// Nạp sẵn tài khoản demo để test/demo hai tài khoản A/B.
   void seed({required String email, required String password, required String displayName}) {

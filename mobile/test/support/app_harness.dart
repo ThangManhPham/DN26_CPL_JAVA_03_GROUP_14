@@ -24,6 +24,11 @@ class AppHarness {
     MockTimelineScenario timelineScenario = MockTimelineScenario.success,
     bool failReaction = false,
   }) {
+    // Xóa trạng thái static để các test không bị ảnh hưởng lẫn nhau.
+    MockAuthRepository.clear();
+    MockCoupleRepository.clear();
+    MockTimelineRepository.clear();
+
     final client = ApiClient(baseUrl: 'http://localhost:8080');
     final authRepository = MockAuthRepository(latency: Duration.zero)
       ..seed(
