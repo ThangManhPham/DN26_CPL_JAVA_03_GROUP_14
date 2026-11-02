@@ -117,6 +117,14 @@ mobile/lib/
 
 Chạy: `flutter run -d chrome --dart-define=USE_MOCK=true` (hoặc iOS Simulator, xem §10).
 
+> **Lưu ý về Test Manual Pairing trên Web (Mock Mode):**
+> Do mỗi cửa sổ trình duyệt (window/tab) là một môi trường JS riêng biệt, chúng không chia sẻ bộ nhớ static. Để test luồng ghép đôi A gửi mã cho B thành công ở chế độ Mock, hãy thực hiện **trên cùng một tab**:
+> 1. Đăng nhập Alex -> Tạo mã mời (ví dụ `9MEPST`) -> Sao chép mã.
+> 2. Đăng xuất (Profile -> Đăng xuất).
+> 3. Đăng nhập Sam -> Nhập mã mời đã chép -> Ghép đôi thành công.
+>
+> (Các mã mời đặc biệt như `EXPYR3`, `US3D22`... hoạt động ở mọi nơi mà không cần bước trên).
+
 ### Sprint 1
 
 | Chức năng | Bước test | Kết quả mong đợi | Pass/Fail |
