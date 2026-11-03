@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/state/photo_feed_bus.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/async_states.dart';
 import '../data/timeline_models.dart';
@@ -33,16 +35,26 @@ class _TimelineScreenState extends State<TimelineScreen> {
     currentUserId: widget.currentUserId,
   );
   final ScrollController _scroll = ScrollController();
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
     _controller.loadInitial();
+    // Ảnh do người ấy gửi từ thiết bị khác chỉ xuất hiện nhờ nhịp đồng bộ này.
+    _syncTimer = Timer.periodic(
+      const Duration(seconds: 7),
+      (_) => _syncFromServer(),
+    );
+    // Ảnh mình vừa gửi: làm mới ngay, không chờ nhịp định kỳ.
+    PhotoFeedBus.revision.addListener(_syncFromServer);
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
+    PhotoFeedBus.revision.removeListener(_syncFromServer);
     _scroll.removeListener(_onScroll);
     _scroll.dispose();
     _controller.dispose();
@@ -55,6 +67,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (position.pixels >= position.maxScrollExtent - 320) {
       _controller.loadMore();
     }
+  }
+
+  /// Làm mới feed nền. Bỏ qua khi người dùng đang xem ở giữa danh sách để
+  /// không làm mất vị trí cuộn; kéo-để-làm-mới vẫn luôn khả dụng.
+  void _syncFromServer() {
+    if (!mounted) return;
+    if (_scroll.hasClients && _scroll.offset > 160) return;
+    _controller.refresh();
   }
 
   Future<void> _react(PhotoItem photo, PhotoReactionType? type) async {

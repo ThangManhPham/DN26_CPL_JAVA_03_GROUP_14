@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'core/state/photo_feed_bus.dart';
 import 'data/photo_repository.dart';
 import 'ios_widget_bridge.dart';
 
@@ -160,6 +161,9 @@ class _PhotoScreenState extends State<PhotoScreen> {
       );
       final bytes = await widget.repository.image(widget.token, photo);
       await IosWidgetBridge.showPhoto(bytes);
+      // Báo cho timeline đang mở phía dưới làm mới để ảnh vừa gửi hiện ngay
+      // ở đầu feed của người gửi.
+      PhotoFeedBus.notifyNewPhoto();
       if (mounted) {
         setState(() {
           _latest = photo;

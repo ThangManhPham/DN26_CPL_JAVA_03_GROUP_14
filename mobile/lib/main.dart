@@ -57,7 +57,7 @@ Future<void> main() async {
           ? MockTimelineRepository(currentUserId: () => auth.user?.id ?? 'mock-me')
           : ApiTimelineRepository(client),
       photos: AppConfig.useMock
-          ? MockPhotoRepository()
+          ? MockPhotoRepository(currentUser: () => auth.user)
           : HttpPhotoRepository(baseUrl: AppConfig.baseUrl),
       push: push,
       messengerKey: messengerKey,

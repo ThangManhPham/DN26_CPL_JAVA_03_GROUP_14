@@ -92,17 +92,35 @@ class PhotoItem {
     return copyWith(reactions: next);
   }
 
-  PhotoItem copyWith({List<PhotoReaction>? reactions}) => PhotoItem(
+  PhotoItem copyWith({
+    List<PhotoReaction>? reactions,
+    String? senderDisplayName,
+  }) => PhotoItem(
     id: id,
     coupleId: coupleId,
     senderId: senderId,
-    senderDisplayName: senderDisplayName,
+    senderDisplayName: senderDisplayName ?? this.senderDisplayName,
     mimeType: mimeType,
     sizeBytes: sizeBytes,
     createdAt: createdAt,
     imagePath: imagePath,
     reactions: reactions ?? this.reactions,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'coupleId': coupleId,
+    'senderId': senderId,
+    'senderDisplayName': senderDisplayName,
+    'mimeType': mimeType,
+    'sizeBytes': sizeBytes,
+    'createdAt': createdAt.toIso8601String(),
+    'imagePath': imagePath,
+    'reactions': reactions.map((r) => {
+      'userId': r.userId,
+      'type': r.type.wire,
+    }).toList(),
+  };
 
   factory PhotoItem.fromJson(Map<String, dynamic> json) {
     final sender = json['sender'];
