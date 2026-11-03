@@ -8,9 +8,10 @@
 | Hạng mục | Kết quả |
 |---|---|
 | `flutter analyze` | **No issues found!** |
-| `flutter test` | **37/37 pass** |
+| `flutter test` | **49/49 pass** |
 | Flutter / Dart | Flutter 3.47.9 (stable) • Dart 3.13.7 |
 | Thay đổi cấu hình iOS | **Không có** (giữ nguyên `Info.plist`, deployment target của M1) |
+| Dev mock server dùng chung | `mobile/tool/mock_server/` (shelf) — chia sẻ dữ liệu giữa 2 thiết bị/cửa sổ |
 | Ngoài phạm vi | chat, AI, album, event, widget — không làm |
 
 ## 2. Hiện trạng trước khi làm (đã có / còn thiếu)
@@ -77,29 +78,36 @@ Trạng thái hiển thị ở mọi màn: **loading / empty / error** (dùng `L
 ## 6. Cấu trúc code
 
 ```
-mobile/lib/
-├─ main.dart                         # ráp ApiClient + AuthController + Repository, khởi động app
-├─ core/
-│  ├─ config/app_config.dart         # USE_MOCK, base URL qua --dart-define
-│  ├─ network/api_client.dart        # Dio + interceptor Bearer + xử lý 401
-│  ├─ network/api_exception.dart     # chuẩn hóa lỗi theo contract + userMessage
-│  ├─ state/auth_controller.dart     # login/logout/restore/updateProfile (ChangeNotifier)
-│  ├─ storage/token_storage.dart     # flutter_secure_storage + fallback in-memory (web)
-│  ├─ router/app_router.dart         # redirect theo trạng thái phiên
-│  ├─ theme/app_theme.dart           # token màu/layout dùng chung + formatLocalDateTime
-│  ├─ widgets/{async_states,brand_mark}.dart
-│  ├─ services/share_service.dart    # share sheet iOS / Web Share API + clipboard
-│  └─ push/                          # abstract + factory + stub(web)/io(iOS)
-├─ features/
-│  ├─ auth/{data,presentation}/       # models, repository (Api/Mock), AuthScreen, ProfileScreen, validators
-│  ├─ pairing/{data,presentation}/    # pairing_models/repository (Api/Mock), PairingGate/Screen, InviteCreate, InviteJoin, CoupleHome, PairingController
-│  └─ timeline/{data,presentation}/   # timeline_models/repository (Api/Mock), TimelineController/Screen, PhotoDetailScreen, ReactionBar
-└─ data/, photo_screen.dart, ios_widget_bridge.dart, firebase_options.dart   # dùng lại của M1
+mobile/
+├─ tool/mock_server/                 # dev mock server dùng chung (shelf) — test 2 thiết bị
+│  ├─ server.dart                    # route + CORS(*), chạy: dart run tool/mock_server/server.dart
+│  ├─ store.dart                     # state in-memory: users/token/couples/invites/photos/reactions
+│  └─ multipart.dart                 # parse multipart/form-data cho upload ảnh
+└─ lib/
+   ├─ main.dart                      # ráp ApiClient + AuthController + Repository, khởi động app
+   ├─ core/
+   │  ├─ config/app_config.dart       # USE_MOCK, base URL qua --dart-define
+   │  ├─ network/api_client.dart      # Dio + interceptor Bearer + xử lý 401
+   │  ├─ network/api_exception.dart   # chuẩn hóa lỗi theo contract + userMessage
+   │  ├─ network/mock_web_sync*.dart  # đồng bộ LocalStorage giữa tab cùng trình duyệt (Mock)
+   │  ├─ state/auth_controller.dart   # login/logout/restore/updateProfile (ChangeNotifier)
+   │  ├─ state/photo_feed_bus.dart    # tín hiệu "vừa gửi ảnh" → TimelineScreen tự refresh
+   │  ├─ storage/token_storage.dart   # flutter_secure_storage + fallback in-memory (web)
+   │  ├─ router/app_router.dart       # redirect theo trạng thái phiên
+   │  ├─ theme/app_theme.dart         # token màu/layout dùng chung + formatLocalDateTime
+   │  ├─ widgets/{async_states,brand_mark}.dart
+   │  ├─ services/share_service.dart  # share sheet iOS / Web Share API + clipboard
+   │  └─ push/                        # abstract + factory + stub(web)/io(iOS)
+   ├─ features/
+   │  ├─ auth/{data,presentation}/     # models, repository (Api/Mock), AuthScreen, ProfileScreen, validators
+   │  ├─ pairing/{data,presentation}/  # pairing_models/repository (Api/Mock), PairingGate/Screen, InviteCreate, InviteJoin, CoupleHome, PairingController
+   │  └─ timeline/{data,presentation}/ # timeline_models/repository (Api/Mock), TimelineController/Screen, PhotoDetailScreen, ReactionBar
+   └─ data/, photo_screen.dart, ios_widget_bridge.dart, firebase_options.dart   # dùng lại của M1
 ```
 
 **Mock API**: mỗi feature có `abstract` repository + `Mock*Repository` (độ trễ, case lỗi) + `Api*Repository`, chuyển bằng `--dart-define=USE_MOCK=true`. JSON shape của mock giữ đúng contract (camelCase). Mock mô phỏng: thành công, danh sách rỗng, 403, 404, 401, lỗi tải thêm, reaction lỗi. Mã đặc biệt để demo/test: `EXPYR3` (hết hạn), `US3D22` (mã sai/đã dùng), `S3LF22` (tự ghép), `PAYRD2` (người gửi đã ghép).
 
-## 7. Danh sách test tự động (37 test — đã xanh)
+## 7. Danh sách test tự động (49 test — đã xanh)
 
 | File | Số test | Nội dung |
 |---|---|---|
@@ -107,8 +115,10 @@ mobile/lib/
 | `test/core/auth_controller_test.dart` | 5 | login lưu token; login sai mật khẩu; restore khôi phục phiên; restore xóa token hỏng; `forceLogout` (401) |
 | `test/features/timeline_controller_test.dart` | 6 | Cursor pagination tới hết dữ liệu; refresh giữ trang đầu; reaction optimistic; rollback khi lỗi; lỗi 403 bản địa hóa; lỗi tải thêm giữ dữ liệu cũ |
 | `test/features/timeline_repository_test.dart` | 5 | `fetchPage` đúng cursor/limit + camelCase; `PUT` reaction body `type`; `DELETE` reaction; `fetchPhoto` bỏ reaction type lạ; `fetchImage` qua endpoint xác thực |
-| `test/features/timeline_screen_test.dart` | 6 | Skeleton → danh sách; empty; lỗi 403 + nút thử lại; reaction cập nhật tức thì; reaction lỗi rollback + SnackBar; photo detail đúng giờ local |
+| `test/features/timeline_screen_test.dart` | 7 | Skeleton → danh sách; empty; lỗi 403 + nút thử lại; reaction cập nhật tức thì; reaction lỗi rollback + SnackBar; photo detail đúng giờ local; **tự làm mới khi có ảnh mới (`PhotoFeedBus`)** |
 | `test/features/pairing_flow_test.dart` | 3 | A tạo mã → B nhập mã → Couple Home → hủy ghép có xác nhận; các case lỗi nhập mã; từ Couple Home mở Timeline |
+| `test/features/photo_upload_timeline_test.dart` | 2 | Ảnh gửi qua `MockPhotoRepository` **lên đầu timeline kèm đúng bytes** (không placeholder); mỗi ảnh giữ bytes riêng |
+| `test/features/mock_server_e2e_test.dart` | 9 | E2E trên **dev mock server**: A tạo mã → B ghép; mã dùng lại → `INVALID_INVITE_CODE`; đã ghép → `ALREADY_PAIRED`; tự ghép → `CANNOT_PAIR_SELF`; hết hạn → `INVITE_EXPIRED`; **A gửi ảnh cả A/B thấy, mới nhất đầu + B tải đúng bytes**; phân trang cursor; người ngoài → 404/401; reaction B → A thấy & bỏ được |
 | `test/widget_test.dart` | 3 | Validate form auth; đăng ký → sửa hồ sơ → đăng xuất → đăng nhập; đăng nhập sai hiện lỗi an toàn |
 | `test/auth_repository_test.dart` (M1) | 1 | Contract register/login/profile |
 | `test/photo_repository_test.dart` (M1) | 3 | Request ID UUID; ảnh latest qua endpoint xác thực; 404 = empty |
@@ -117,6 +127,8 @@ mobile/lib/
 
 Chạy: `flutter run -d chrome --dart-define=USE_MOCK=true` (hoặc iOS Simulator, xem §10).
 
+### 8.1 Mock Mode (`USE_MOCK=true`) — chạy đơn lẻ trên một máy
+
 > **Lưu ý về Test Manual Pairing trên Web (Mock Mode):**
 > Do mỗi cửa sổ trình duyệt (window/tab) là một môi trường JS riêng biệt, chúng không chia sẻ bộ nhớ static. Để test luồng ghép đôi A gửi mã cho B thành công ở chế độ Mock, hãy thực hiện **trên cùng một tab**:
 > 1. Đăng nhập Alex -> Tạo mã mời (ví dụ `9MEPST`) -> Sao chép mã.
@@ -124,8 +136,29 @@ Chạy: `flutter run -d chrome --dart-define=USE_MOCK=true` (hoặc iOS Simulato
 > 3. Đăng nhập Sam -> Nhập mã mời đã chép -> Ghép đôi thành công.
 >
 > (Các mã mời đặc biệt như `EXPYR3`, `US3D22`... hoạt động ở mọi nơi mà không cần bước trên).
+>
+> **Muốn test 2 thiết bị/cửa sổ thật → dùng dev mock server (§8.2), khi đó dữ liệu nằm ở server nên chia sẻ được cho mọi thiết bị.**
 
-### Sprint 1
+### 8.2 Dev Mock Server — test 2 thiết bị/2 cửa sổ (A/B)
+
+Chạy kịch bản này khi cần chứng minh **dữ liệu dùng chung giữa 2 thiết bị** (§10.2 có lệnh chạy). Cả hai client dùng `--dart-define=OURSPACE_API_BASE_URL=...` và **KHÔNG** bật `USE_MOCK`.
+
+| Chức năng | Bước test | Kết quả mong đợi | Pass/Fail |
+|---|---|---|---|
+| Đăng nhập 2 tài khoản | Cửa sổ A: login `alex@ourspace.dev`; Cửa sổ B: login `sam@ourspace.dev` | Cả hai vào màn Pairing, mã phiên (token) riêng | |
+| Tạo mã ở A | A → "Tạo mã mời" | Mã 6 ký tự + hạn 24h | |
+| B ghép bằng mã của A | B → nhập mã của A → Ghép đôi | B vào Couple Home, 2 thành viên (Alex & Sam) | |
+| A thấy đã ghép | A kéo-để-làm-mới / mở lại Couple Home | A cũng thấy Couple Home với 2 thành viên | |
+| **A gửi ảnh** | A → "Gửi ảnh cho người ấy" → chọn/gửi ảnh | Ảnh hiện **ngay đầu timeline của A** (không cần refresh) | |
+| **B thấy ảnh của A** | B mở/refresh Timeline | Ảnh của A hiện trong timeline của B (đúng người gửi + giờ local) | |
+| **B gửi ảnh** | B → gửi ảnh | Ảnh của B lên đầu timeline của B | |
+| **A thấy ảnh của B** | A refresh Timeline (hoặc chờ nhịp tự đồng bộ ≤ 7s) | Ảnh của B hiện trong timeline của A | |
+| Mã dùng lại | Tài khoản C nhập mã A vừa dùng | "Mã ghép đôi không đúng hoặc đã được sử dụng." | |
+| Tự ghép | A nhập lại mã của chính A | "Không thể tự ghép đôi với chính mình." | |
+| Người ngoài (C) xem ảnh couple | C gọi/mở timeline của A | Không thấy ảnh (403/404), không lộ URL | |
+| Reaction của B tới A | B thả ❤️ vào ảnh của A; A refresh | A thấy reaction của B; B bỏ được | |
+
+### 8.3 Sprint 1 checklist
 
 | Chức năng | Bước test | Kết quả mong đợi | Pass/Fail |
 |---|---|---|---|
@@ -144,7 +177,7 @@ Chạy: `flutter run -d chrome --dart-define=USE_MOCK=true` (hoặc iOS Simulato
 | Hủy ghép đôi (xác nhận) | Bấm Hủy ghép đôi → "Hủy ghép đôi" | Quay về màn Pairing | |
 | Loading/Empty/Error | Mở màn khi mạng chậm/mất mạng | Có spinner, có trạng thái lỗi + nút Thử lại | |
 
-### Sprint 2
+### 8.4 Sprint 2 checklist
 
 | Chức năng | Bước test | Kết quả mong đợi | Pass/Fail |
 |---|---|---|---|
@@ -175,6 +208,9 @@ Lưu vào `docs/design/m2/` (tạo khi chụp), đặt tên theo màn — dùng 
 | 8 | `m2-08-photo-detail.png` | Chi tiết ảnh (giờ local, reaction) |
 | 9 | `m2-09-timeline-empty.png` | Timeline rỗng |
 | 10 | `m2-10-timeline-error.png` | Timeline lỗi + nút Thử lại |
+| 11 | `m2-11-mock-server-terminal.png` | Terminal chạy `dart run tool/mock_server/server.dart` (log server + tài khoản demo) |
+| 12 | `m2-12-two-device-pairing.png` | Hai cửa sổ/thiết bị cạnh nhau: A tạo mã, B ghép thành công (chứng minh dữ liệu dùng chung) |
+| 13 | `m2-13-two-device-timeline.png` | Hai timeline A/B đều có ảnh của nhau (ảnh mới nhất ở đầu, đúng người gửi + giờ local) |
 
 ## 10. Hướng dẫn chạy
 
@@ -183,7 +219,8 @@ Lưu vào `docs/design/m2/` (tạo khi chụp), đặt tên theo màn — dùng 
 flutter pub get
 ```
 
-**Flutter Web (test/demo, khuyến nghị — dùng mock):**
+### 10.1 Flutter Web (test/demo một máy — dùng mock trong app)
+
 ```bash
 flutter run -d chrome --dart-define=USE_MOCK=true
 ```
@@ -199,11 +236,37 @@ flutter run -d iphone --dart-define=USE_MOCK=true
 flutter run -d iphone
 # base URL mặc định http://localhost:8080
 ```
-Máy thật/HTTPS: `--dart-define=OURSPACE_API_BASE_URL=https://...`.
 
-**Tài khoản demo (mock):** `alex@ourspace.dev` / `sam@ourspace.dev`, mật khẩu `Password123!`.
+### 10.2 Dev Mock Server — dữ liệu dùng chung cho 2 thiết bị (khuyến nghị để test A/B)
 
-**Kiểm thử chất lượng:**
+Backend thật trong repo **chưa có đủ endpoint** cho timeline 2 chiều và **chưa có CORS** cho web (xem §13), nên để test 2 thiết bị dùng **dev mock server** kèm trong repo (`mobile/tool/mock_server/`, chỉ dùng `shelf` + `shelf_router` + `shelf_cors_headers`). Server giữ state trong bộ nhớ (restart là mất), **không thay thế backend thật**, tuân đúng `docs/05-api-contract.md`.
+
+**Bước 1 — chạy server (một lệnh, tại `mobile/`):**
+```bash
+dart run tool/mock_server/server.dart
+# hoặc đổi cổng: $env:PORT=9090; dart run tool/mock_server/server.dart   (PowerShell)
+```
+Server lắng nghe `0.0.0.0:8080` (mọi giao diện mạng) nên thiết bị khác trong cùng LAN truy cập được. Log in ra URL + tài khoản demo.
+
+**Bước 2 — chạy app trỏ vào server (bỏ `USE_MOCK`):**
+
+Máy chạy server (Cửa sổ A):
+```bash
+flutter run -d chrome --dart-define=OURSPACE_API_BASE_URL=http://localhost:8080
+```
+
+Thiết bị thứ hai (Cửa sổ B — điện thoại/máy khác **cùng mạng LAN**): dùng **IP LAN của máy chạy server** (ví dụ `192.168.1.20`; xem bằng `ipconfig` trên Windows):
+```bash
+flutter run -d chrome --dart-define=OURSPACE_API_BASE_URL=http://192.168.1.20:8080
+# iOS Simulator trên chính máy đó thì dùng http://localhost:8080
+# Máy thật/HTTPS: --dart-define=OURSPACE_API_BASE_URL=https://...
+```
+
+**Tài khoản demo (mock server seed sẵn):** `alex@ourspace.dev` / `sam@ourspace.dev`, mật khẩu `Password123!`.
+
+> Ghi chú: hai cửa sổ Chrome trên cùng một máy vẫn dùng chung server → ghép đôi và ảnh hiển thị cho nhau được (không còn phụ thuộc static/LocalStorage như Mock Mode §8.1).
+
+### 10.3 Kiểm thử chất lượng
 ```bash
 flutter analyze
 flutter test
@@ -224,8 +287,28 @@ Lưu ý: `analysis_options.yaml` được công cụ Flutter tự thêm `analyze
 5. **Ảnh riêng tư & lints mới.** Dùng `imagePath` có xác thực + cache theo `imagePath`; sửa các lint/error của Dart 3.13 (`use_null_aware_elements`, `unnecessary_import`, `missing_function_body`, thiếu import `kIsWeb`) để `flutter analyze` sạch.
 6. **Response lỗi không đồng nhất giữa các module.** Pairing dùng `message` tiếng Việt từ server, auth trả tiếng Anh — nên `ApiException.userMessage` map theo `code` và fallback về `message`.
 
-## 13. Việc chưa làm / phụ thuộc
+## 13. Nguyên nhân & cách sửa 2 lỗi test (mã mời + ảnh không lên timeline)
 
-- Backend thật cho timeline/reaction: các endpoint `GET /api/v1/photos`, `GET /api/v1/photos/{id}`, `PUT/DELETE .../reaction` là **contract đề xuất** (M2) — chưa xác nhận đã có trên backend, nên demo dùng mock. Khi backend sẵn sàng chỉ cần bỏ `--dart-define=USE_MOCK=true`.
-- Test 2 thiết bị thật (iOS): checklist §8 đã chuẩn bị; cần chạy thủ công trên 2 máy/tài khoản khi có APNs + backend.
+### 13.1 Lỗi 1 — Mã mời tạo ở A không dùng được ở B (khác cửa sổ/thiết bị)
+
+- **Nguyên nhân:** chế độ `USE_MOCK` lưu toàn bộ state (users, couple, invites, photos) **trong tiến trình app**. Trên Web, mỗi cửa sổ/tab là một tiến trình JS độc lập; trên 2 thiết bị là 2 app hoàn toàn khác nhau. Bản `MockWebSync` chỉ chia sẻ được giữa các tab **cùng một trình duyệt** (qua LocalStorage), không chia sẻ giữa 2 máy/2 app. Vì vậy mã mời sinh ở A không tồn tại trong bộ nhớ của B.
+- **Cách sửa:** bổ sung **dev mock server dùng chung** (`mobile/tool/mock_server/`) — state nằm ở server, mọi client (A/B) đọc/ghi cùng một nguồn qua HTTP. App chạy với `--dart-define=OURSPACE_API_BASE_URL=...` (không bật `USE_MOCK`) dùng lớp `Api*Repository` sẵn có, **không đổi kiến trúc app**. Giữ nguyên `USE_MOCK` cho test đơn lẻ. Đã kiểm chứng bằng `test/features/mock_server_e2e_test.dart` (A tạo mã → B ghép **trên cùng server**).
+
+### 13.2 Lỗi 2 — Gửi ảnh xong không hiện trên timeline của người gửi, đối phương cũng không thấy
+
+- **Nguyên nhân (3 điểm):**
+  1. `MockPhotoRepository` (nơi gửi ảnh) và `MockTimelineRepository` (nơi đọc timeline) là **hai nguồn dữ liệu tách rời**. `upload()` chỉ lưu ảnh vào biến `_latestBytes` **dùng chung một biến cho mọi ảnh** và gọi `addPhoto(...)` **không kèm bytes** → timeline chỉ hiển thị ảnh placeholder 1×1, mọi ảnh trông giống nhau; `image()` luôn trả về bytes mới nhất thay vì đúng ảnh được yêu cầu.
+  2. Timeline **không tự làm mới** sau khi gửi ảnh và **không có tín hiệu** "có ảnh mới" → ảnh mới không bao giờ xuất hiện cho tới khi đổi màn.
+  3. Người được ghép không có cơ chế đồng bộ định kỳ → mở timeline cũng không thấy ảnh mới.
+- **Cách sửa:**
+  1. **Đúng bytes theo từng ảnh:** `MockPhotoRepository` đổi sang map `_bytesByPath[imagePath] → bytes` và truyền `bytes` vào `MockTimelineRepository.addPhoto(photo, bytes: ...)`; `MockTimelineRepository.fetchImage(imagePath)` trả đúng bytes của ảnh đó (`_imageBytes[imagePath]`, fallback placeholder). Xóa biến `_latestBytes` dùng chung.
+  2. **Tự làm mới tức thì ở người gửi:** thêm `core/state/photo_feed_bus.dart` (`ValueNotifier<int> revision`). `PhotoScreen` phát `PhotoFeedBus.notifyNewPhoto()` sau khi upload thành công; `TimelineScreen` `addListener` để gọi `refresh()` ngay, ảnh mới lên đầu feed.
+  3. **Đồng bộ cho người được ghép:** `TimelineScreen` thêm `Timer.periodic(7s)` gọi `refresh()` (chỉ khi đang ở đầu danh sách, `offset ≤ 160`), **hủy khi rời màn** (`dispose`). Kéo-để-làm-mới vẫn hoạt động như cũ.
+- **Kiểm chứng:** `test/features/timeline_screen_test.dart` ("timeline tự làm mới ngay khi có ảnh mới"), `test/features/photo_upload_timeline_test.dart` (bytes đúng từng ảnh), `test/features/mock_server_e2e_test.dart` (A gửi ảnh → cả A và B thấy, B tải đúng bytes).
+
+## 14. Việc chưa làm / phụ thuộc
+
+- **Backend thật cho timeline/reaction còn thiếu** (không sửa — báo member phụ trách): trong repo backend **chưa có** `GET /api/v1/photos` (list, cursor), `GET /api/v1/photos/{id}` (detail), endpoint phục vụ bytes ảnh `GET /api/v1/photos/{id}/image`, và `PUT/DELETE /api/v1/photos/{id}/reaction`; đồng thời **chưa cấu hình CORS** cho web (`Access-Control-Allow-Origin`). Các endpoint này nằm trong contract đề xuất ở `docs/05-api-contract.md` §5.3. → Vì vậy demo 2 thiết bị dùng **dev mock server** (§10.2); khi backend bổ sung đủ, chỉ cần trỏ `--dart-define=OURSPACE_API_BASE_URL=...` vào backend thật, **không cần đổi code app**.
+- **Dev mock server** chỉ là công cụ test: state trong bộ nhớ, không bền vững, không dùng cho production.
+- Test 2 thiết bị thật (iOS): checklist §8.2 đã chuẩn bị; cần chạy thủ công trên 2 máy/tài khoản.
 - Firebase/APNs: giữ nguyên phần M1, cần cấu hình + máy thật để kiểm thử push.
