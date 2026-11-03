@@ -20,6 +20,14 @@ class CoupleMember {
     role: json['role'] as String? ?? 'MEMBER',
     joinedAt: _parseDate(json['joinedAt']),
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'displayName': displayName,
+    'email': email,
+    'role': role,
+    'joinedAt': joinedAt?.toIso8601String(),
+  };
 }
 
 class Couple {
@@ -64,6 +72,14 @@ class Couple {
         .map((item) => CoupleMember.fromJson(item.cast<String, dynamic>()))
         .toList(growable: false),
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'status': status,
+    'anniversaryDate': anniversaryDate?.toIso8601String(),
+    'createdAt': createdAt?.toIso8601String(),
+    'members': members.map((member) => member.toJson()).toList(),
+  };
 }
 
 class CoupleInvite {

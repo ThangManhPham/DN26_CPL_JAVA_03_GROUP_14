@@ -1,5 +1,6 @@
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/mock_web_sync.dart';
 import '../../auth/data/auth_models.dart';
 import 'pairing_models.dart';
 
@@ -64,7 +65,9 @@ class MockCoupleRepository implements CoupleRepository {
   MockCoupleRepository({
     required this.currentUser,
     this.latency = const Duration(milliseconds: 400),
-  });
+  }) {
+    _load();
+  }
 
   final UserProfile? Function() currentUser;
   final Duration latency;
@@ -72,9 +75,7 @@ class MockCoupleRepository implements CoupleRepository {
   /// Dùng static để chia sẻ trạng thái giữa các instance trong cùng runtime
   /// (ví dụ: khi logout/login lại hoặc trong widget test).
   ///
-  /// LƯU Ý: Trên Web, các tab khác nhau chạy trong các process riêng biệt nên
-  /// không chia sẻ static memory. Để test ghép đôi giữa 2 cửa sổ trình duyệt,
-  /// hãy sử dụng một tab duy nhất (Tạo mã -> Logout -> Login tài khoản khác -> Nhập mã).
+  /// LƯU Ý: Trên Web, đã hỗ trợ đồng bộ qua LocalStorage giúp test giữa 2 tab.
   static final Set<String> _consumedCodes = <String>{};
   static final Map<String, Couple> _coupleByUserId = <String, Couple>{};
   static String? _inviteCode;
@@ -82,6 +83,40 @@ class MockCoupleRepository implements CoupleRepository {
   static String? _inviteOwnerName;
   static DateTime? _inviteExpiresAt;
   static int _coupleSequence = 0;
+
+  static void _save() {
+    MockWebSync.save('mock_pairing', {
+      'consumedCodes': _consumedCodes.toList(),
+      'coupleByUserId': _coupleByUserId.map((k, v) => MapEntry(k, v.toJson())),
+      'inviteCode': _inviteCode,
+      'inviteOwnerId': _inviteOwnerId,
+      'inviteOwnerName': _inviteOwnerName,
+      'inviteExpiresAt': _inviteExpiresAt?.toIso8601String(),
+      'coupleSequence': _coupleSequence,
+    });
+  }
+
+  static void _load() {
+    final data = MockWebSync.load('mock_pairing');
+    if (data is Map) {
+      if (data['consumedCodes'] is List) {
+        _consumedCodes.addAll((data['consumedCodes'] as List).cast<String>());
+      }
+      if (data['coupleByUserId'] is Map) {
+        final map = (data['coupleByUserId'] as Map).cast<String, dynamic>();
+        map.forEach((k, v) {
+          _coupleByUserId[k] = Couple.fromJson(v as Map<String, dynamic>);
+        });
+      }
+      _inviteCode = data['inviteCode'] as String?;
+      _inviteOwnerId = data['inviteOwnerId'] as String?;
+      _inviteOwnerName = data['inviteOwnerName'] as String?;
+      if (data['inviteExpiresAt'] != null) {
+        _inviteExpiresAt = DateTime.tryParse(data['inviteExpiresAt'] as String);
+      }
+      _coupleSequence = data['coupleSequence'] as int? ?? 0;
+    }
+  }
 
   /// Xóa toàn bộ dữ liệu mock (dùng cho test).
   static void clear() {
@@ -92,10 +127,12 @@ class MockCoupleRepository implements CoupleRepository {
     _inviteOwnerName = null;
     _inviteExpiresAt = null;
     _coupleSequence = 0;
+    _save();
   }
 
   @override
   Future<CoupleInvite> createInvite() async {
+    _load(); // Đảm bảo lấy code mới nhất từ tab khác
     await Future<void>.delayed(latency);
     final me = _requireUser();
     if (_coupleByUserId.containsKey(me.id)) {
@@ -105,11 +142,13 @@ class MockCoupleRepository implements CoupleRepository {
     _inviteOwnerId = me.id;
     _inviteOwnerName = me.displayName;
     _inviteExpiresAt = DateTime.now().toUtc().add(const Duration(hours: 24));
+    _save();
     return CoupleInvite(inviteCode: _inviteCode!, expiresAt: _inviteExpiresAt!);
   }
 
   @override
   Future<Couple> join(String inviteCode) async {
+    _load(); // Đảm bảo lấy code mới nhất từ tab khác
     await Future<void>.delayed(latency);
     final me = _requireUser();
     final code = inviteCode.trim().toUpperCase();
@@ -121,7 +160,7 @@ class MockCoupleRepository implements CoupleRepository {
       case 'EXPYR3':
         throw _error(400, 'INVITE_EXPIRED', 'Mã ghép đôi đã hết hạn.');
       case 'US3D22':
-        throw _error(400, 'INVALID_INVITE_CODE', 'Mã ghép đôi không tồn tại hoặc đã được sử dụng.');
+        throw _error(400, 'INVALID_INVITE_CODE', 'Mã ghép đôi không đúng hoặc đã được sử dụng.');
       case 'S3LF22':
         throw _error(400, 'CANNOT_PAIR_SELF', 'Không thể tự ghép đôi với chính mình.');
       case 'PAYRD2':
@@ -133,6 +172,7 @@ class MockCoupleRepository implements CoupleRepository {
     }
     if (_inviteExpiresAt == null || _inviteExpiresAt!.isBefore(DateTime.now().toUtc())) {
       _consumedCodes.add(code);
+      _save();
       throw _error(400, 'INVITE_EXPIRED', 'Mã ghép đôi đã hết hạn.');
     }
     if (_inviteOwnerId == me.id) {
@@ -167,11 +207,13 @@ class MockCoupleRepository implements CoupleRepository {
     _consumedCodes.add(code);
     _coupleByUserId[_inviteOwnerId!] = couple;
     _coupleByUserId[me.id] = couple;
+    _save();
     return couple;
   }
 
   @override
   Future<Couple?> current() async {
+    _load();
     await Future<void>.delayed(latency);
     final me = currentUser();
     if (me == null) return null;
@@ -180,6 +222,7 @@ class MockCoupleRepository implements CoupleRepository {
 
   @override
   Future<void> unpair() async {
+    _load();
     await Future<void>.delayed(latency);
     final me = _requireUser();
     final couple = _coupleByUserId[me.id];
@@ -187,6 +230,7 @@ class MockCoupleRepository implements CoupleRepository {
       throw _error(404, 'COUPLE_NOT_FOUND', 'Người dùng hiện không thuộc cặp đôi nào đang hoạt động.');
     }
     _coupleByUserId.removeWhere((_, value) => value.id == couple.id);
+    _save();
   }
 
   UserProfile _requireUser() {

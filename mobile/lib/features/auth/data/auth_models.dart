@@ -14,6 +14,12 @@ class UserProfile {
     email: json['email'] as String,
     displayName: json['displayName'] as String? ?? '',
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'email': email,
+    'displayName': displayName,
+  };
 }
 
 class AuthSession {
