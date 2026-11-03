@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/state/photo_feed_bus.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/features/timeline/data/timeline_models.dart';
 import 'package:mobile/features/timeline/data/timeline_repository.dart';
 import 'package:mobile/features/timeline/presentation/timeline_screen.dart';
 
@@ -120,10 +122,38 @@ void main() {
 
     expect(find.byKey(const Key('photoDetailImage')), findsOneWidget);
     expect(find.byKey(const Key('photoDetailSender')), findsOneWidget);
-    // Ảnh thứ nhất của mock gửi lúc 2026-10-21T09:00Z.
+    // Ảnh thứ nhất của mock gửi lúc `seedBaseUtc`.
     expect(
       tester.widget<Text>(find.byKey(const Key('photoDetailTime'))).data,
-      formatLocalDateTime(DateTime.utc(2026, 10, 21, 9)),
+      formatLocalDateTime(MockTimelineRepository.seedBaseUtc),
     );
+  });
+
+  testWidgets('timeline tự làm mới ngay khi có ảnh mới vừa gửi', (tester) async {
+    final repository = buildRepository(photoCount: 1);
+    await tester.pumpWidget(timeline(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('photo_mock-photo-1')), findsOneWidget);
+    expect(find.byKey(const Key('photo_fresh-1')), findsNothing);
+
+    // Mô phỏng ảnh vừa gửi thành công (như MockPhotoRepository làm) + tín hiệu.
+    MockTimelineRepository.addPhoto(
+      PhotoItem(
+        id: 'fresh-1',
+        coupleId: 'mock-couple',
+        senderId: 'mock-me',
+        senderDisplayName: 'Bạn',
+        mimeType: 'image/png',
+        sizeBytes: 16,
+        createdAt: DateTime.utc(2026, 10, 26, 9),
+        imagePath: '/api/v1/photos/fresh-1/image',
+        reactions: const [],
+      ),
+    );
+    PhotoFeedBus.notifyNewPhoto();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('photo_fresh-1')), findsOneWidget);
   });
 }
