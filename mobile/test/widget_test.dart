@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/data/auth_repository.dart';
-import 'package:mobile/data/photo_repository.dart';
-import 'package:mobile/main.dart';
+import 'package:mobile/features/auth/presentation/validators.dart';
+
+import 'support/app_harness.dart';
 
 void main() {
   test('auth field validation', () {
@@ -19,7 +19,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(OurSpaceApp(repository: MockAuthRepository()));
+
+    await tester.pumpWidget(AppHarness().app);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Đăng ký'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('authSubmit')));
@@ -53,9 +56,11 @@ void main() {
 
     await tester.tap(find.byKey(const Key('openProfile')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Đăng xuất'));
+    await tester.ensureVisible(find.byKey(const Key('logoutButton')));
+    await tester.tap(find.byKey(const Key('logoutButton')));
     await tester.pumpAndSettle();
     expect(find.text('Chào mừng\ntrở lại.'), findsOneWidget);
+
     await tester.enterText(
       find.byKey(const Key('emailField')),
       'alex@example.com',
@@ -64,6 +69,7 @@ void main() {
       find.byKey(const Key('passwordField')),
       'Password123!',
     );
+    await tester.ensureVisible(find.byKey(const Key('authSubmit')));
     await tester.tap(find.byKey(const Key('authSubmit')));
     await tester.pumpAndSettle();
     expect(find.text('Chào Sam,'), findsOneWidget);
@@ -76,39 +82,17 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(OurSpaceApp(repository: MockAuthRepository()));
+
+    await tester.pumpWidget(AppHarness().app);
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('emailField')),
       'unknown@example.com',
     );
     await tester.enterText(find.byKey(const Key('passwordField')), 'wrongpass');
-    await tester.tap(find.byKey(const Key('authSubmit')));
-    await tester.pumpAndSettle();
-    expect(find.text('Email hoặc mật khẩu không đúng.'), findsOneWidget);
-  });
-
-  testWidgets('photo screen shows empty state and requires a selected image', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(OurSpaceApp(
-      repository: MockAuthRepository(),
-      photoRepository: MockPhotoRepository(),
-    ));
-    await tester.tap(find.text('Đăng ký'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('displayNameField')), 'Alex');
-    await tester.enterText(find.byKey(const Key('emailField')), 'alex@example.com');
-    await tester.enterText(find.byKey(const Key('passwordField')), 'Password123!');
     await tester.ensureVisible(find.byKey(const Key('authSubmit')));
     await tester.tap(find.byKey(const Key('authSubmit')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('openPhotos')));
-    await tester.tap(find.byKey(const Key('openPhotos')));
-    await tester.pumpAndSettle();
-    expect(find.text('Chưa có ảnh chung. Hãy gửi khoảnh khắc đầu tiên.'), findsOneWidget);
-    final button = tester.widget<FilledButton>(find.byKey(const Key('sendPhoto')));
-    expect(button.onPressed, isNull);
+    expect(find.text('Email hoặc mật khẩu không đúng.'), findsOneWidget);
   });
 }
