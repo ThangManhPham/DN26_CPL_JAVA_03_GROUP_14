@@ -13,6 +13,7 @@ import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'data/photo_repository.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/calendar/data/calendar_repository.dart';
 import 'features/pairing/data/pairing_repository.dart';
 import 'features/timeline/data/timeline_repository.dart';
 import 'firebase_options.dart';
@@ -54,11 +55,14 @@ Future<void> main() async {
           ? MockCoupleRepository(currentUser: () => auth.user)
           : ApiCoupleRepository(client),
       timeline: AppConfig.useMock
-          ? MockTimelineRepository(currentUserId: () => auth.user?.id ?? 'mock-me')
+          ? MockTimelineRepository(
+              currentUserId: () => auth.user?.id ?? 'mock-me',
+            )
           : ApiTimelineRepository(client),
       photos: AppConfig.useMock
           ? MockPhotoRepository(currentUser: () => auth.user)
           : HttpPhotoRepository(baseUrl: AppConfig.baseUrl),
+      calendar: AppConfig.useMock ? null : ApiCalendarRepository(client),
       push: push,
       messengerKey: messengerKey,
     ),
@@ -94,6 +98,7 @@ class OurSpaceApp extends StatefulWidget {
     required this.couples,
     required this.timeline,
     required this.photos,
+    this.calendar,
     this.push,
     this.messengerKey,
   });
@@ -102,6 +107,7 @@ class OurSpaceApp extends StatefulWidget {
   final CoupleRepository couples;
   final TimelineRepository timeline;
   final PhotoRepository photos;
+  final CalendarRepository? calendar;
   final AppPushBridge? push;
   final GlobalKey<ScaffoldMessengerState>? messengerKey;
 
@@ -111,6 +117,7 @@ class OurSpaceApp extends StatefulWidget {
 
 class _OurSpaceAppState extends State<OurSpaceApp> {
   String? _registeredPushToken;
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
@@ -135,12 +142,20 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
     if (previous != null) {
       widget.push?.deactivate(previous);
       IosWidgetBridge.clear();
+      if (token == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !widget.auth.isAuthenticated) {
+            _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+          }
+        });
+      }
     }
     if (token != null) widget.push?.activate(token);
   }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorKey: _navigatorKey,
     scaffoldMessengerKey: widget.messengerKey,
     title: 'OurSpace',
     debugShowCheckedModeBanner: false,
@@ -157,6 +172,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
       couples: widget.couples,
       photos: widget.photos,
       timeline: widget.timeline,
+      calendar: widget.calendar,
     ),
   );
 }

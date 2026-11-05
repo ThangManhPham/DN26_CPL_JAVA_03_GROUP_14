@@ -97,6 +97,10 @@ Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairin
 
 ## 6.4 Sprint 3 — AI, Quality & Release
 
+Rà soát đầu Sprint 3: [Sprint 2 review và carry-over](17-sprint2-review-sprint3-carryover.md).
+Triển khai local M3 cho phần lịch Flutter và bằng chứng kiểm thử:
+[M3 calendar integration](18-m3-sprint3-calendar-integration.md).
+
 | Member | Feature tiếp tục sở hữu | Sprint 3 deliverables |
 |---|---|---|
 | M1 | Photo Sharing & iOS WidgetKit | Retry upload, bảo vệ object, iOS widget refresh best-effort nếu hoàn thành, push integration, test iPhone thật |

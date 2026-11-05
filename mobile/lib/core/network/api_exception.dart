@@ -42,6 +42,9 @@ class ApiException implements Exception {
         'Tính năng hủy ghép đôi đang tạm dừng để chốt chính sách dữ liệu (OD-03).',
     'PHOTO_NOT_FOUND': 'Không tìm thấy ảnh.',
     'COUPLE_REQUIRED': 'Bạn cần ghép đôi trước khi dùng tính năng này.',
+    'EVENT_NOT_FOUND': 'Sự kiện không còn tồn tại hoặc bạn không có quyền xem.',
+    'EVENT_CONFLICT':
+        'Người ấy đã thay đổi sự kiện. Tải bản mới trước khi sửa tiếp.',
   };
 
   bool get isNetworkFailure => statusCode == 0;
@@ -49,7 +52,8 @@ class ApiException implements Exception {
 
   /// 401 do token hết hạn/không hợp lệ. `INVALID_CREDENTIALS` là sai mật khẩu
   /// khi đăng nhập, không phải phiên hết hạn.
-  bool get isSessionExpired => statusCode == 401 && code != 'INVALID_CREDENTIALS';
+  bool get isSessionExpired =>
+      statusCode == 401 && code != 'INVALID_CREDENTIALS';
   bool get isForbidden => statusCode == 403 || code == 'FORBIDDEN';
   bool get isNotFound => statusCode == 404 || code == 'COUPLE_NOT_FOUND';
   bool get isConflict => statusCode == 409;
@@ -71,7 +75,8 @@ class ApiException implements Exception {
     return ApiException(
       statusCode: status,
       code: body['code'] as String? ?? 'HTTP_$status',
-      message: (serverMessage is String && serverMessage.isNotEmpty && status < 500)
+      message:
+          (serverMessage is String && serverMessage.isNotEmpty && status < 500)
           ? serverMessage
           : _fallbackMessage(status),
       details: _asMap(body['details']),

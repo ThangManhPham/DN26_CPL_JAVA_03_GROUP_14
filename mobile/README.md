@@ -31,3 +31,13 @@ Runner and OurSpaceWidget in Xcode before signing on an iPhone. iOS push still
 requires APNs setup and a physical-device test.
 
 See `docs/M2_REPORT.md` for full implementation details, test results and manual checklist.
+
+### Couple Space & Calendar (M3)
+
+In real API mode, paired users can open **Ngày kỷ niệm & lịch chung** from Couple
+Home. Shared anniversary/counter, month/day calendar and event create/edit/delete
+use the authenticated Spring Boot APIs. Conflicts require an explicit reload;
+session expiry closes calendar/editor and returns to Login. The in-memory mock
+mode does not provide calendar APIs. See
+[`docs/18-m3-sprint3-calendar-integration.md`](../docs/18-m3-sprint3-calendar-integration.md)
+for setup, A/B acceptance and timezone behavior.
