@@ -97,6 +97,8 @@ Rà soát code đã merge ngày 29/10/2026: Auth/Profile Flutter và Auth/Pairin
 
 ## 6.4 Sprint 3 — AI, Quality & Release
 
+Rà soát code Sprint 2 ngày 05/11/2026 và danh sách việc chuyển tiếp theo owner: [Sprint 2 review / Sprint 3 carry-over](17-sprint2-review-sprint3-carryover.md). Ưu tiên hoàn thành các mục P0 này trước khi tuyên bố demo Sprint 2 tích hợp hoặc bắt đầu AI.
+
 | Member | Feature tiếp tục sở hữu | Sprint 3 deliverables |
 |---|---|---|
 | M1 | Photo Sharing & iOS WidgetKit | Retry upload, bảo vệ object, iOS widget refresh best-effort nếu hoàn thành, push integration, test iPhone thật |
