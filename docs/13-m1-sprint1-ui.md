@@ -66,7 +66,7 @@ flutter analyze
 flutter test
 ```
 
-For a real backend on Android emulator, omit `OURSPACE_USE_MOCK` and use the
-default `http://10.0.2.2:8080`. For another device or HTTPS environment, set
-`--dart-define=OURSPACE_API_BASE_URL=<reachable-origin>`. Local HTTP is allowed
-only in the Android debug manifest. Release builds require HTTPS.
+For a real backend on iOS Simulator, omit `OURSPACE_USE_MOCK` and use the
+default `http://localhost:8080`. For an iPhone or HTTPS environment, set
+`--dart-define=OURSPACE_API_BASE_URL=<reachable-origin>`. Release builds
+require HTTPS.

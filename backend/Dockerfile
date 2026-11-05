@@ -2,11 +2,13 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 
-# Copy the descriptor first so dependency downloads can be cached between builds.
+# Keep Maven's local repository across Docker builds. Resolving dependencies as
+# part of `package` is more reliable than the dependency plugin's go-offline
+# goal for this project's Spring Boot plugin graph.
 COPY pom.xml ./
-RUN mvn --batch-mode --no-transfer-progress dependency:go-offline
 COPY src ./src
-RUN mvn --batch-mode --no-transfer-progress package
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn --batch-mode --no-transfer-progress package
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
 RUN apk add --no-cache curl && addgroup -S app && adduser -S -u 10001 -G app app

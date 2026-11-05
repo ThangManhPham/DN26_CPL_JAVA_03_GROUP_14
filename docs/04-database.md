@@ -124,7 +124,7 @@ CREATE UNIQUE INDEX uq_one_active_couple_per_user
 | V1__create_users.sql | users + unique email |
 | V2__create_couples_and_members.sql | couples, couple_members, active-membership index |
 | V3__create_couple_invites.sql | invitations + indexes |
-| V4__create_photos.sql | photos + timeline indexes |
+| V4__create_photos.sql | photos + couple/created_at index + unique(sender_id, client_request_id) for retry dedup |
 | V5__create_reactions_and_albums.sql | reactions, albums, album_photos |
 | V6__create_events_and_plans.sql | events, date_plans |
 | V7__create_ai_memory_stories.sql | AI story metadata |

@@ -1,0 +1,8 @@
+services:
+  backend:
+    user: ${FIREBASE_HOST_UID:?Set to the output of id -u so the backend can read the private key}
+    environment:
+      OURSPACE_PUSH_ENABLED: "true"
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    volumes:
+      - ${FIREBASE_SERVICE_ACCOUNT_FILE:?Set an absolute path to your private Firebase service-account JSON}:/run/secrets/firebase-service-account.json:ro

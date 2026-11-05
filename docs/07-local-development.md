@@ -18,7 +18,6 @@ ourspace/
 │   └── pom.xml
 ├── mobile/
 │   ├── lib/
-│   ├── android/
 │   ├── ios/
 │   └── pubspec.yaml
 ├── docs/
@@ -88,7 +87,7 @@ docker compose ps
 docker compose logs -f backend
 ```
 
-Chế độ debug backend trong IDE: `docker compose up -d db`, đặt datasource host `localhost:5432`; cấu hình này **khác** hostname `db` dùng bên trong Docker network. Với Flutter Android emulator, `localhost` của emulator không phải localhost máy host; API base URL phải cấu hình tương ứng thiết bị/emulator.
+Chế độ debug backend trong IDE: `docker compose up -d db`, đặt datasource host `localhost:5432`; cấu hình này **khác** hostname `db` dùng bên trong Docker network. iOS Simulator có thể dùng `http://localhost:8080`; iPhone thật cần base URL mà điện thoại truy cập được, cấu hình qua `OURSPACE_API_BASE_URL`.
 
 **Không chạy** `docker compose down -v` nếu muốn giữ dữ liệu local, vì `-v` xóa DB volume.
 

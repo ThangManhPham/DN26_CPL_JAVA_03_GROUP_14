@@ -85,12 +85,23 @@ Response thành công thường trả resource trực tiếp; collections có `i
 
 ## 5.3 Sprint 2 — Photo & Timeline
 
+**M1 photo-sharing implementation (multipart fallback):** The current backend uses one authenticated multipart upload instead of the two-step upload-intent/finalize draft below. This avoids exposing object-store credentials or direct bucket URLs to mobile clients. M2/M4 should use the response's photo `id`, not a storage key.
+
+| Method | Path | Request | Response |
+|---|---|---|---|
+| POST | `/api/v1/photos` | `multipart/form-data`, field `file` (JPEG/PNG, 1 byte–10 MB), `Idempotency-Key: <UUID>` header, Bearer token | 201 `PhotoResponse`; same key by same sender returns same photo |
+| GET | `/api/v1/photos/latest` | Bearer token | 200 `PhotoResponse` for authenticated user's active couple, or 404 `PHOTO_NOT_FOUND` |
+| GET | `/api/v1/photos/{id}/image` | Bearer token | Image bytes with private/no-store cache header, or 404 for outsiders |
+| PUT | `/api/v1/devices/push-token` | Bearer token, JSON `{ "token": "<Firebase installation ID>", "platform": "ios" }` | 204; register current device for generic photo alerts |
+| DELETE | `/api/v1/devices/push-token` | Same authenticated JSON body | 204; remove only current user's device |
+
+`PhotoResponse` contains `id`, `coupleId`, `senderId`, `mimeType`, `sizeBytes`, `createdAt`, `imagePath`. `imagePath` is an **authenticated API path**, not a public object URL. Upload without an active couple returns 409 `COUPLE_REQUIRED`; unsupported or forged image format returns 400. Never send `storageKey` to clients. Photo content is stored in a private S3-compatible bucket (SeaweedFS in local Compose).
+
 
 | Method | Path | Mục đích | Owner |
 |---|---|---|---|
-| POST | `/api/v1/photos/upload-intents` | Xin quyền/địa chỉ upload hoặc fallback multipart | M1 |
-| POST | `/api/v1/photos` | Finalize ảnh, couple-ownership check | M1 |
-| GET | `/api/v1/photos/latest` | Ảnh mới nhất để đồng bộ app/widget | M1 |
+| POST | `/api/v1/photos` | Multipart upload + couple-ownership check (implemented) | M1 |
+| GET | `/api/v1/photos/latest` | Ảnh mới nhất để đồng bộ app/widget (implemented) | M1 |
 | GET | `/api/v1/photos` | Timeline, `cursor`, `limit` | M2 |
 | GET | `/api/v1/photos/{id}` | Chi tiết ảnh | M2 |
 | PUT | `/api/v1/photos/{id}/reaction` | Tạo/thay reaction hiện hành | M2 |

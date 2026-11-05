@@ -13,7 +13,7 @@
 
 | Member | Chương/tiểu mục cá nhân | Đầu ra dùng chứng minh |
 |---|---|---|
-| M1 | Photo Sharing & Widget | upload flow, object storage, widget, push, test thiết bị |
+| M1 | Photo Sharing & iOS WidgetKit | upload flow, object storage, push, test iPhone; widget chỉ báo cáo khi thực sự triển khai |
 | M2 | Timeline & Reactions | pagination, reaction schema/API, UI/test access control |
 | M3 | Couple Space & Shared Calendar | love counter, calendar schema, timezone, event flows |
 | M4 | Memory Album & AI Memory Story | album relationships, prompt design, AI output validation |
@@ -44,7 +44,7 @@ Lưu ý **Sprint 1 công việc nền tảng vẫn ghi công đúng** theo PR: M
 ## 11.5 Quy tắc trung thực khi viết báo cáo
 
 - Không ghi tính năng dự kiến như đã hoàn thành.
-- Nếu iOS widget chưa test, ghi rõ Android prototype hoặc môi trường đã xác minh.
+- Nếu iOS widget chưa triển khai/kiểm thử trên iPhone thật, ghi rõ là chưa hoàn thành.
 - Nếu AI trả kết quả mô phỏng, không viết là đã gọi provider thật.
 - Nếu sử dụng API/hosted model, gọi là **AI integration** thay vì tự huấn luyện AI.
 - Tránh dùng screenshot ảnh riêng tư/có thông tin thật chưa được phép.

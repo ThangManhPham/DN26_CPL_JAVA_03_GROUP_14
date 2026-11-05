@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   application:
     name: ourspace-backend
   datasource:
@@ -29,6 +33,13 @@ app:
     ttl-seconds: ${JWT_TTL_SECONDS:3600}
 
 ourspace:
+  photos:
+    s3:
+      endpoint: ${PHOTO_S3_ENDPOINT}
+      region: ${PHOTO_S3_REGION:us-east-1}
+      access-key: ${PHOTO_S3_ACCESS_KEY}
+      secret-key: ${PHOTO_S3_SECRET_KEY}
+      bucket: ${PHOTO_S3_BUCKET:ourspace-photos}
   pairing:
     invite-ttl-hours: 24
     invite-code-length: 6

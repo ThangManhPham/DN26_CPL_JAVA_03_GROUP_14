@@ -1,6 +1,6 @@
 # OurSpace mobile
 
-Flutter client for the M1 Sprint 1 auth and profile UI. See
+Flutter client for M1 auth/profile and Sprint 2 photo-sharing UI. See
 [the design and integration handoff](../docs/13-m1-sprint1-ui.md).
 
 Use Flutter 3.41.6 / Dart 3.11.4:
@@ -12,9 +12,22 @@ flutter analyze
 flutter test
 ```
 
-The mock mode stores demo users only in memory. To call the real Spring Boot
-API, omit the mock flag and set `OURSPACE_API_BASE_URL` when the backend is
-not reachable at the Android emulator default `http://10.0.2.2:8080`.
+The mock mode stores demo users and the latest photo only in memory. For the real
+API, start Docker Compose from the repository root, omit the mock flag and run
+on an iOS Simulator (`http://localhost:8080`). Set `--dart-define=OURSPACE_API_BASE_URL=https://...`
+for another host or a real device. Local HTTP is for debug only.
+
+The Photos screen lets a paired user choose/capture JPEG or PNG (max 10 MB),
+send it with an idempotency key, and retrieve the latest photo through an
+authenticated endpoint. The Photos screen polls every 30 seconds while open.
+When a new partner photo arrives, it shows an in-app
+notification. Firebase Messaging registers a device after login and handles
+generic photo alerts when configured server-side; see the Sprint 2 handoff.
+Logout unregisters the device and clears the iOS WidgetKit image. WidgetKit
+shows the latest cached photo after it is loaded or sent in-app. The project
+uses App Group `group.com.ourspace.mobile`; select the same App Group for both
+Runner and OurSpaceWidget in Xcode before signing on an iPhone. iOS push still
+requires APNs setup and a physical-device test.
 
 This client does not yet persist tokens across app restarts; that is S1-07
 (M2). The authenticated Home is a placeholder for S1-09 (M2).

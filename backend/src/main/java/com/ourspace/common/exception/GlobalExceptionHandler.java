@@ -50,6 +50,18 @@ public class GlobalExceptionHandler {
                 "Request body must be valid JSON with only supported fields."));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleOversizedUpload() {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ErrorResponse.of("PHOTO_TOO_LARGE", "Photo must be 10 MB or smaller."));
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader() {
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of("INVALID_REQUEST", "Required request header is missing."));
+    }
+
     @ExceptionHandler(org.springframework.web.HttpMediaTypeNotAcceptableException.class)
     public ResponseEntity<Void> handleNotAcceptable() {
         return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();

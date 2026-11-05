@@ -51,5 +51,5 @@ Các cặp đôi cần một không gian riêng để chia sẻ khoảnh khắc 
 ## 1.7 Giả định
 
 - Thời gian 12 tuần là giả định quy hoạch, không phải lịch đã được xác nhận.
-- Flutter được chọn theo định hướng cross-platform; tính khả thi iOS thực tế phụ thuộc thiết bị macOS/Xcode và test widget.
+- Flutter/Dart được dùng cho ứng dụng iOS; WidgetKit và push cần kiểm chứng bằng Xcode và iPhone thật.
 - Tên OurSpace là tên làm việc, cần kiểm tra trademark nếu phát hành công khai.
