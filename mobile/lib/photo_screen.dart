@@ -68,6 +68,7 @@ class _PhotoScreenState extends State<PhotoScreen> {
       if (mounted) {
         setState(() {
           _latest = photo;
+          _latestBytes = null;
           _latestBytes = bytes;
         });
         if (silent &&
@@ -159,19 +160,27 @@ class _PhotoScreenState extends State<PhotoScreen> {
         _mime!,
         _requestId!,
       );
-      final bytes = await widget.repository.image(widget.token, photo);
-      await IosWidgetBridge.showPhoto(bytes);
-      // Báo cho timeline đang mở phía dưới làm mới để ảnh vừa gửi hiện ngay
-      // ở đầu feed của người gửi.
-      PhotoFeedBus.notifyNewPhoto();
+      // The server has accepted the photo. A later image/widget refresh failure
+      // must not leave the send button active or report that upload failed.
       if (mounted) {
         setState(() {
           _latest = photo;
-          _latestBytes = bytes;
           _selected = null;
           _mime = null;
           _requestId = null;
         });
+      }
+      // Báo cho timeline đang mở phía dưới làm mới để ảnh vừa gửi hiện ngay
+      // ở đầu feed của người gửi.
+      PhotoFeedBus.notifyNewPhoto();
+      try {
+        final bytes = await widget.repository.image(widget.token, photo);
+        await IosWidgetBridge.showPhoto(bytes);
+        if (mounted) setState(() => _latestBytes = bytes);
+      } catch (_) {
+        if (mounted) {
+          setState(() => _error = 'Ảnh đã gửi. Không thể cập nhật ảnh xem trước/widget; hãy tải lại.');
+        }
       }
     } on PhotoException catch (error) {
       if (mounted) setState(() => _error = error.message);
