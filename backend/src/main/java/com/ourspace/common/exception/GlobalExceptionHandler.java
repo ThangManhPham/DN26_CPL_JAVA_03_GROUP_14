@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler({org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class})
+    public ResponseEntity<ErrorResponse> handleInvalidParameters() {
+        return ResponseEntity.badRequest().body(ErrorResponse.of("INVALID_REQUEST", "Missing or invalid request parameter."));
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
         return ResponseEntity.status(ex.status()).body(ErrorResponse.of(ex.code(), ex.getMessage()));
@@ -68,7 +74,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResponse> handleConcurrentUpdate() {
+    public ResponseEntity<ErrorResponse> handleConcurrentUpdate(HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/api/v1/events")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
+                    "EVENT_CONFLICT", "Event changed concurrently. Reload and retry."));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErrorResponse.of(
                 "PROFILE_CONFLICT", "Profile changed concurrently. Reload and retry."));
     }

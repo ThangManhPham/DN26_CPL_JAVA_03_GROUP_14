@@ -1,4 +1,4 @@
-param()
+param([switch]$Calendar)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http
 $backendPath = Split-Path -Parent $PSScriptRoot
@@ -7,6 +7,10 @@ if (-not (Test-Path -LiteralPath $jarPath)) { throw 'Build first: mvn package' }
 $logPath = Join-Path $backendPath 'target/http-smoke.log'
 $errorPath = Join-Path $backendPath 'target/http-smoke-error.log'
 $javaPath = (Get-Command java).Source
+if ($env:JAVA_HOME) {
+    $directJavaPath = Join-Path $env:JAVA_HOME 'bin/java.exe'
+    if (Test-Path -LiteralPath $directJavaPath) { $javaPath = $directJavaPath }
+}
 $httpClient = New-Object System.Net.Http.HttpClient
 $httpClient.Timeout = [TimeSpan]::FromSeconds(10)
 $smokeProcess = $null
@@ -70,6 +74,32 @@ try {
     if ($changed.displayName -ne 'Updated Smoke') { throw 'Profile update failed.' }
     $withoutToken = Invoke-SmokeApi 'GET' '/api/v1/users/me' '' '' 401
     $invalidToken = Invoke-SmokeApi 'GET' '/api/v1/users/me' '' 'invalid-token' 401
+    if ($Calendar) {
+        $sessions = @{}
+        foreach ($name in @('partner', 'outsider')) {
+            $body = @{ email="$name@example.com"; password='ExamplePassword123!'; displayName=$name } | ConvertTo-Json
+            $null = Invoke-SmokeApi 'POST' '/api/v1/auth/register' $body '' 201
+            $credentials = @{ email="$name@example.com"; password='ExamplePassword123!' } | ConvertTo-Json
+            $sessions[$name] = Invoke-SmokeApi 'POST' '/api/v1/auth/login' $credentials '' 200
+        }
+        $invite = Invoke-SmokeApi 'POST' '/api/v1/couple-invites' '' $session.accessToken 201
+        $join = @{ inviteCode=$invite.inviteCode } | ConvertTo-Json
+        $null = Invoke-SmokeApi 'POST' '/api/v1/couples/join' $join $sessions['partner'].accessToken 201
+        $space = Invoke-SmokeApi 'PATCH' '/api/v1/couple-space' '{"anniversaryDate":"2020-02-29"}' $session.accessToken 200
+        if ($space.daysTogether -lt 1) { throw 'Love counter failed.' }
+        $eventBody = @{ title='Calendar smoke'; startsAt='2026-11-01T12:00:00Z'; endsAt='2026-11-01T13:00:00Z'; timezone='Asia/Ho_Chi_Minh' } | ConvertTo-Json
+        $event = Invoke-SmokeApi 'POST' '/api/v1/events' $eventBody $session.accessToken 201
+        $detail = Invoke-SmokeApi 'GET' "/api/v1/events/$($event.id)" '' $sessions['partner'].accessToken 200
+        if ($detail.title -ne 'Calendar smoke') { throw 'Partner cannot read event.' }
+        $null = Invoke-SmokeApi 'GET' "/api/v1/events/$($event.id)" '' $sessions['outsider'].accessToken 404
+        $list = Invoke-SmokeApi 'GET' '/api/v1/events?from=2026-11-01T00:00:00Z&until=2026-12-01T00:00:00Z' '' $session.accessToken 200
+        if (@($list.items).Count -ne 1) { throw 'Calendar range query failed.' }
+        $changedEvent = Invoke-SmokeApi 'PATCH' "/api/v1/events/$($event.id)" '{"title":"Updated event","version":0}' $sessions['partner'].accessToken 200
+        $null = Invoke-SmokeApi 'PATCH' "/api/v1/events/$($event.id)" '{"title":"Stale","version":0}' $session.accessToken 409
+        $null = Invoke-SmokeApi 'DELETE' "/api/v1/events/$($event.id)?version=$($changedEvent.version)" '' $session.accessToken 204
+        $null = Invoke-SmokeApi 'GET' "/api/v1/events/$($event.id)" '' $sessions['partner'].accessToken 404
+        Write-Output 'Calendar HTTP smoke PASS: real pairing, anniversary/counter, shared CRUD, range query, outsider rejection and stale version.'
+    }
     Write-Output 'HTTP smoke PASS: health, register, duplicate email, login, JWT profile, PATCH, missing/invalid token.'
 } finally {
     $httpClient.Dispose()

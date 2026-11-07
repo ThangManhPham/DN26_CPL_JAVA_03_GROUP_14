@@ -36,13 +36,13 @@ import WidgetKit
           }
           try bytes.data.write(to: fileURL, options: .atomic)
           if #available(iOS 14.0, *) {
-            WidgetCenter.shared.reloadTimelines(ofKind: "OurSpaceWidget")
+            WidgetCenter.shared.reloadAllTimelines()
           }
           result(nil)
         case "clear":
           try? FileManager.default.removeItem(at: fileURL)
           if #available(iOS 14.0, *) {
-            WidgetCenter.shared.reloadTimelines(ofKind: "OurSpaceWidget")
+            WidgetCenter.shared.reloadAllTimelines()
           }
           result(nil)
         default:
