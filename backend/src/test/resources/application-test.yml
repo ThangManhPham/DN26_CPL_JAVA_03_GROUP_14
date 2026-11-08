@@ -20,6 +20,14 @@ ourspace:
   pairing:
     invite-ttl-hours: 24
     invite-code-length: 6
+  ai:
+    provider: mock
+    api-key: test-mock-key
+    model: test-model
+    timeout-ms: 5000
+    max-tokens: 500
+    rate-limit-window-minutes: 10
+    max-drafts-per-window: 100
 
 logging:
   level:

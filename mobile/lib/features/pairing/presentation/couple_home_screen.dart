@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../album_list_screen.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/state/auth_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/album_repository.dart';
+import '../../../data/memory_story_repository.dart';
 import '../../../data/photo_repository.dart';
 import '../../../photo_screen.dart';
 import '../../auth/presentation/profile_screen.dart';
@@ -200,6 +204,33 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
                   ),
                   icon: const Icon(Icons.add_a_photo_outlined),
                   label: const Text('Gửi ảnh cho người ấy'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const Key('openAlbums'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => AlbumListScreen(
+                        albumRepository: AppConfig.useMock
+                            ? MockAlbumRepository()
+                            : HttpAlbumRepository(baseUrl: AppConfig.baseUrl),
+                        photoRepository: widget.photos,
+                        storyRepository: AppConfig.useMock
+                            ? MockMemoryStoryRepository()
+                            : HttpMemoryStoryRepository(baseUrl: AppConfig.baseUrl),
+                        token: widget.auth.token ?? '',
+                        userId: widget.userId,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Album & Kỷ niệm của hai bạn'),
                 ),
                 if (_actionError != null) ...[
                   const SizedBox(height: 18),

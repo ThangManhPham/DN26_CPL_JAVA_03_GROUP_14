@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'album_detail_screen.dart';
 import 'data/album_repository.dart';
+import 'data/memory_story_repository.dart';
 import 'data/photo_repository.dart';
 import 'theme.dart';
 
@@ -11,12 +12,14 @@ class AlbumListScreen extends StatefulWidget {
     super.key,
     required this.albumRepository,
     required this.photoRepository,
+    this.storyRepository,
     required this.token,
     required this.userId,
   });
 
   final AlbumRepository albumRepository;
   final PhotoRepository photoRepository;
+  final MemoryStoryRepository? storyRepository;
   final String token;
   final String userId;
 
@@ -263,6 +266,7 @@ class _AlbumListScreenState extends State<AlbumListScreen> {
                       albumId: album.id,
                       albumRepository: widget.albumRepository,
                       photoRepository: widget.photoRepository,
+                      storyRepository: widget.storyRepository,
                       token: widget.token,
                       userId: widget.userId,
                     ),
