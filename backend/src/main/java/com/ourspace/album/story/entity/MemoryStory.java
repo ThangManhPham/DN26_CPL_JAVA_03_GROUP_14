@@ -6,6 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -47,6 +48,10 @@ public class MemoryStory {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     protected MemoryStory() {}
 
     public MemoryStory(UUID id, UUID coupleId, UUID albumId, String title, String story,
@@ -80,5 +85,6 @@ public class MemoryStory {
     public UUID getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Long getVersion() { return version; }
 }
 

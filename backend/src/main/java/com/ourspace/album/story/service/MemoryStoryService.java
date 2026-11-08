@@ -5,16 +5,12 @@ import com.ourspace.album.entity.Album;
 import com.ourspace.album.entity.AlbumPhotoId;
 import com.ourspace.album.repository.AlbumPhotoRepository;
 import com.ourspace.album.repository.AlbumRepository;
-import com.ourspace.album.story.ai.AiPromptBuilder;
 import com.ourspace.album.story.ai.AiStoryClient;
-import com.ourspace.album.story.ai.AiStoryProperties;
 import com.ourspace.album.story.dto.AiGeneratedStoryDto;
 import com.ourspace.album.story.dto.CreateMemoryStoryRequest;
 import com.ourspace.album.story.dto.MemoryStoryResponse;
 import com.ourspace.album.story.dto.UpdateMemoryStoryRequest;
 import com.ourspace.album.story.entity.MemoryStory;
-import com.ourspace.album.story.entity.MemoryStoryPhoto;
-import com.ourspace.album.story.entity.MemoryStoryPhotoId;
 import com.ourspace.album.story.entity.MemoryStoryStatus;
 import com.ourspace.album.story.repository.MemoryStoryPhotoRepository;
 import com.ourspace.album.story.repository.MemoryStoryRepository;
@@ -23,12 +19,9 @@ import com.ourspace.pairing.entity.CoupleEntity;
 import com.ourspace.pairing.repository.CoupleRepository;
 import com.ourspace.photo.Photo;
 import com.ourspace.photo.PhotoRepository;
-import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -50,7 +43,8 @@ public class MemoryStoryService {
     private final CoupleRepository coupleRepository;
     private final PhotoRepository photoRepository;
     private final AiStoryClient aiStoryClient;
-    private final AiStoryProperties aiProperties;
+    private final AiStoryRateLimiter rateLimiter;
+    private final MemoryStoryDraftPersistenceService draftPersistenceService;
     private final ObjectMapper objectMapper;
 
     public MemoryStoryService(MemoryStoryRepository storyRepository,
@@ -60,7 +54,8 @@ public class MemoryStoryService {
                               CoupleRepository coupleRepository,
                               PhotoRepository photoRepository,
                               AiStoryClient aiStoryClient,
-                              AiStoryProperties aiProperties,
+                              AiStoryRateLimiter rateLimiter,
+                              MemoryStoryDraftPersistenceService draftPersistenceService,
                               ObjectMapper objectMapper) {
         this.storyRepository = storyRepository;
         this.storyPhotoRepository = storyPhotoRepository;
@@ -69,7 +64,8 @@ public class MemoryStoryService {
         this.coupleRepository = coupleRepository;
         this.photoRepository = photoRepository;
         this.aiStoryClient = aiStoryClient;
-        this.aiProperties = aiProperties;
+        this.rateLimiter = rateLimiter;
+        this.draftPersistenceService = draftPersistenceService;
         this.objectMapper = objectMapper;
     }
 
@@ -99,7 +95,6 @@ public class MemoryStoryService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "TOO_MANY_PHOTOS", "Chỉ được chọn tối đa 20 ảnh cho một câu chuyện kỷ niệm.");
         }
 
-        // Kiểm tra từng ảnh: phải thuộc couple và phải nằm trong album được chỉ định
         List<String> photoDates = new ArrayList<>();
         for (UUID photoId : photoIds) {
             validatePhotoOwnership(photoId, couple.getId());
@@ -116,65 +111,36 @@ public class MemoryStoryService {
             }
         }
 
-        // 3. Rate-limit guard chống spam submit
-        Instant windowStart = Instant.now().minus(aiProperties.getRateLimitWindowMinutes(), ChronoUnit.MINUTES);
-        long recentDrafts = storyRepository.countRecentDraftsByUser(couple.getId(), userId, windowStart);
-        if (recentDrafts >= aiProperties.getMaxDraftsPerWindow()) {
-            throw new ApiException(
-                    HttpStatus.TOO_MANY_REQUESTS,
-                    "AI_SUBMIT_LIMIT_EXCEEDED",
-                    "Bạn đã tạo " + recentDrafts + " bản nháp trong " + aiProperties.getRateLimitWindowMinutes() +
-                    " phút qua. Vui lòng hoàn thành các bản nháp trước khi tạo thêm."
-            );
-        }
+        // 3. Giữ chỗ nguyên tử (Rate-limit guard) trước lời gọi AI
+        rateLimiter.tryAcquire(userId);
 
-        // 4. Lời gọi AI (Không giữ khóa / Transaction DB)
-        log.info("Generating AI Memory Story for albumId={}, photoCount={}", album.getId(), photoIds.size());
-        AiGeneratedStoryDto generated = aiStoryClient.generateStory(album.getTitle(), photoIds.size(), photoDates, request.notes());
-
-        // 5. Lưu kết quả dưới dạng DRAFT trong Transaction
-        return persistDraft(userId, couple.getId(), album.getId(), photoIds, generated);
-    }
-
-    @Transactional
-    public MemoryStoryResponse persistDraft(UUID userId, UUID coupleId, UUID albumId, List<UUID> photoIds, AiGeneratedStoryDto generated) {
-        // Kiểm tra lại tính toàn vẹn (đề phòng unpair hoặc album bị xóa trong khi AI đang xử lý)
-        CoupleEntity couple = getActiveCouple(userId);
-        if (!couple.getId().equals(coupleId)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "COUPLE_CHANGED", "Trạng thái cặp đôi đã thay đổi trong quá trình xử lý.");
-        }
-        Album album = getAlbum(albumId, coupleId);
-
-        String highlightsJson;
+        AiGeneratedStoryDto generated;
         try {
-            highlightsJson = objectMapper.writeValueAsString(
-                    generated.highlights() != null ? generated.highlights() : Collections.emptyList()
-            );
+            // 4. Lời gọi AI (Không giữ khóa / Không nằm trong Transaction DB)
+            log.info("Generating AI Memory Story for albumId={}, photoCount={}", album.getId(), photoIds.size());
+            generated = aiStoryClient.generateStory(album.getTitle(), photoIds.size(), photoDates, request.notes(), request.tone());
         } catch (Exception e) {
-            highlightsJson = "[]";
+            // Giải phóng in-flight khi lỗi để người dùng có thể thử lại
+            rateLimiter.releaseOnError(userId);
+            throw e;
         }
 
-        UUID storyId = UUID.randomUUID();
-        MemoryStory story = new MemoryStory(
-                storyId,
-                coupleId,
-                album.getId(),
-                generated.title() != null ? generated.title().trim() : "Kỷ niệm của chúng mình",
-                generated.story() != null ? generated.story().trim() : "",
-                highlightsJson,
-                generated.tone() != null ? generated.tone().trim() : "warm",
-                MemoryStoryStatus.DRAFT,
-                userId
-        );
-
-        MemoryStory saved = storyRepository.save(story);
-
-        for (UUID pid : photoIds) {
-            storyPhotoRepository.save(new MemoryStoryPhoto(new MemoryStoryPhotoId(storyId, pid)));
+        try {
+            // 5. Lưu kết quả dưới dạng DRAFT trong Transaction nguyên tử qua bean riêng
+            MemoryStoryResponse response = draftPersistenceService.persistDraftAtomically(
+                    userId,
+                    couple.getId(),
+                    album.getId(),
+                    photoIds,
+                    generated,
+                    request.tone()
+            );
+            rateLimiter.complete(userId);
+            return response;
+        } catch (Exception e) {
+            rateLimiter.releaseOnError(userId);
+            throw e;
         }
-
-        log.info("Successfully persisted DRAFT memory story id={} for userId={}", storyId, userId);
-        return MemoryStoryResponse.from(saved, photoIds);
     }
 
     @Transactional(readOnly = true)
@@ -202,13 +168,13 @@ public class MemoryStoryService {
     @Transactional
     public MemoryStoryResponse updateStoryDraft(UUID userId, UUID storyId, UpdateMemoryStoryRequest request) {
         CoupleEntity couple = getActiveCouple(userId);
-        MemoryStory story = storyRepository.findByIdAndCoupleId(storyId, couple.getId())
+        MemoryStory story = storyRepository.findByIdAndCoupleIdWithLock(storyId, couple.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "STORY_NOT_FOUND", "Không tìm thấy câu chuyện kỷ niệm."));
 
         if (story.getStatus() == MemoryStoryStatus.SAVED) {
             throw new ApiException(
-                    HttpStatus.BAD_REQUEST,
-                    "CANNOT_EDIT_SAVED_STORY",
+                    HttpStatus.CONFLICT,
+                    "STORY_ALREADY_SAVED",
                     "Câu chuyện đã được lưu vào không gian chung, không thể chỉnh sửa trong phiên bản hiện tại."
             );
         }
@@ -224,7 +190,7 @@ public class MemoryStoryService {
         story.setTitle(request.title().trim());
         story.setStory(request.story().trim());
         if (request.tone() != null && !request.tone().isBlank()) {
-            story.setTone(request.tone().trim());
+            story.setTone(request.tone().trim().toUpperCase());
         }
 
         if (request.highlights() != null) {
@@ -246,7 +212,7 @@ public class MemoryStoryService {
     @Transactional
     public MemoryStoryResponse saveStory(UUID userId, UUID storyId) {
         CoupleEntity couple = getActiveCouple(userId);
-        MemoryStory story = storyRepository.findByIdAndCoupleId(storyId, couple.getId())
+        MemoryStory story = storyRepository.findByIdAndCoupleIdWithLock(storyId, couple.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "STORY_NOT_FOUND", "Không tìm thấy câu chuyện kỷ niệm."));
 
         // Tính Idempotent: Nếu đã SAVED, trả về thành công trực tiếp mà không lỗi
@@ -328,4 +294,3 @@ public class MemoryStoryService {
         }
     }
 }
-

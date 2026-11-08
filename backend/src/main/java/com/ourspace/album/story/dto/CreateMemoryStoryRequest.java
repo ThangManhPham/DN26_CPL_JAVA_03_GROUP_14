@@ -17,6 +17,9 @@ public record CreateMemoryStoryRequest(
         @Size(max = 1000, message = "Ghi chú không được vượt quá 1000 ký tự")
         String notes,
 
+        @Size(max = 50, message = "Tone không được vượt quá 50 ký tự")
+        String tone,
+
         @NotNull(message = "Bắt buộc phải có xác nhận đồng ý (consent)")
         Boolean consent
 ) {}

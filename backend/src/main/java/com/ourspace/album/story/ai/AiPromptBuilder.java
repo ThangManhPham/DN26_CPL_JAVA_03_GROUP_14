@@ -6,7 +6,7 @@ public class AiPromptBuilder {
 
     public static final String SYSTEM_INSTRUCTION = """
             Bạn là một trợ lý viết truyện kỷ niệm tình yêu cho ứng dụng cặp đôi OurSpace.
-            Nhiệm vụ của bạn là dựa trên thông tin album, metadata các bức ảnh đã chọn và ghi chú của người dùng để viết một câu chuyện kỷ niệm ngắn, ấm áp, lãng mạn và ý nghĩa (khoảng 150 - 300 từ).
+            Nhiệm vụ của bạn là dựa trên thông tin album, metadata các bức ảnh đã chọn, phong cách yêu cầu và ghi chú của người dùng để viết một câu chuyện kỷ niệm ngắn, ấm áp, ý nghĩa (khoảng 150 - 300 từ).
             
             QUY TẮC BẮT BUỘC:
             1. Tuyệt đối chỉ sử dụng thông tin và chi tiết được cung cấp trong phần DỮ LIỆU. Không bịa đặt địa điểm, sự kiện hoặc con người không có thật.
@@ -14,13 +14,23 @@ public class AiPromptBuilder {
             3. Trả về KẾT QUẢ ĐÚNG THEO ĐỊNH DẠNG JSON sau, không thêm bất kỳ văn bản nào ngoài JSON:
             {
               "title": "Tiêu đề ngắn gọn, ý nghĩa (tối đa 15 từ)",
-              "story": "Đoạn văn kể chuyện cảm xúc, ấm áp (150-300 từ)",
+              "story": "Đoạn văn kể chuyện cảm xúc (150-300 từ)",
               "highlights": ["Điểm nhấn 1", "Điểm nhấn 2", "Điểm nhấn 3"],
-              "tone": "warm"
+              "tone": "ROMANTIC"
             }
             """;
 
-    public static String buildUserPrompt(String albumTitle, int photoCount, List<String> photoDates, String userNotes) {
+    public static String mapToneDescription(String tone) {
+        if (tone == null || tone.isBlank()) return "Lãng mạn, ngọt ngào, ấm áp";
+        return switch (tone.trim().toUpperCase()) {
+            case "PLAYFUL" -> "Hài hước, vui tươi, dí dỏm";
+            case "SENTIMENTAL" -> "Sâu lắng, xúc động, chân thành";
+            case "POETIC" -> "Thơ mộng, hoài niệm, nhẹ nhàng";
+            default -> "Lãng mạn, ngọt ngào, ấm áp";
+        };
+    }
+
+    public static String buildUserPrompt(String albumTitle, int photoCount, List<String> photoDates, String userNotes, String requestedTone) {
         StringBuilder sb = new StringBuilder();
         sb.append("--- DỮ LIỆU KỶ NIỆM ---\n");
         sb.append("Album: ").append(albumTitle != null ? albumTitle : "Kỷ niệm của chúng mình").append("\n");
@@ -28,6 +38,7 @@ public class AiPromptBuilder {
         if (photoDates != null && !photoDates.isEmpty()) {
             sb.append("Thời gian các ảnh chụp: ").append(String.join(", ", photoDates)).append("\n");
         }
+        sb.append("Phong cách kể chuyện (Tone): ").append(mapToneDescription(requestedTone)).append("\n");
         if (userNotes != null && !userNotes.isBlank()) {
             // Sanitize user notes to prevent prompt confusion
             String sanitizedNotes = userNotes.replace("\n", " ").trim();
@@ -39,4 +50,3 @@ public class AiPromptBuilder {
         return sb.toString();
     }
 }
-

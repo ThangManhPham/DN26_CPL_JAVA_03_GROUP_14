@@ -12,8 +12,6 @@ import com.ourspace.album.story.dto.CreateMemoryStoryRequest;
 import com.ourspace.album.story.dto.MemoryStoryResponse;
 import com.ourspace.album.story.dto.UpdateMemoryStoryRequest;
 import com.ourspace.album.story.entity.MemoryStory;
-import com.ourspace.album.story.entity.MemoryStoryPhoto;
-import com.ourspace.album.story.entity.MemoryStoryPhotoId;
 import com.ourspace.album.story.entity.MemoryStoryStatus;
 import com.ourspace.album.story.repository.MemoryStoryPhotoRepository;
 import com.ourspace.album.story.repository.MemoryStoryRepository;
@@ -32,7 +30,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -54,10 +51,11 @@ class MemoryStoryServiceTest {
     @Mock private CoupleRepository coupleRepository;
     @Mock private PhotoRepository photoRepository;
     @Mock private AiStoryClient aiStoryClient;
-    @Spy private AiStoryProperties aiProperties = new AiStoryProperties();
+    @Mock private MemoryStoryDraftPersistenceService draftPersistenceService;
+    @Spy private AiStoryRateLimiter rateLimiter = new AiStoryRateLimiter(new AiStoryProperties());
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
-    @InjectMocks private MemoryStoryService storyService;
+    private MemoryStoryService storyService;
 
     private UUID userId;
     private UUID partnerId;
@@ -84,6 +82,19 @@ class MemoryStoryServiceTest {
         photo2Id = UUID.randomUUID();
         photo1 = new Photo(photo1Id, coupleId, userId, UUID.randomUUID(), "k1", "image/png", 1024);
         photo2 = new Photo(photo2Id, coupleId, partnerId, UUID.randomUUID(), "k2", "image/png", 2048);
+
+        storyService = new MemoryStoryService(
+                storyRepository,
+                storyPhotoRepository,
+                albumRepository,
+                albumPhotoRepository,
+                coupleRepository,
+                photoRepository,
+                aiStoryClient,
+                rateLimiter,
+                draftPersistenceService,
+                objectMapper
+        );
     }
 
     @Test
@@ -93,33 +104,36 @@ class MemoryStoryServiceTest {
         when(albumRepository.findByIdAndCoupleId(albumId, coupleId)).thenReturn(Optional.of(album));
         when(photoRepository.findById(photo1Id)).thenReturn(Optional.of(photo1));
         when(albumPhotoRepository.existsById(new AlbumPhotoId(albumId, photo1Id))).thenReturn(true);
-        when(storyRepository.countRecentDraftsByUser(eq(coupleId), eq(userId), any())).thenReturn(0L);
 
         AiGeneratedStoryDto aiResult = new AiGeneratedStoryDto(
                 "Đà Lạt trong sương",
                 "Chúng mình đã cùng nhau ngắm bình minh tuyệt đẹp...",
                 List.of("Bình minh", "Hồ Xuân Hương"),
-                "warm"
+                "ROMANTIC"
         );
-        when(aiStoryClient.generateStory(eq("Chuyến đi Đà Lạt"), eq(1), any(), eq("Thật vui"))).thenReturn(aiResult);
-        when(storyRepository.save(any(MemoryStory.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(aiStoryClient.generateStory(eq("Chuyến đi Đà Lạt"), eq(1), any(), eq("Thật vui"), eq("ROMANTIC"))).thenReturn(aiResult);
 
-        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Thật vui", true);
+        UUID storyId = UUID.randomUUID();
+        MemoryStoryResponse expectedResponse = new MemoryStoryResponse(
+                storyId, coupleId, albumId, "Đà Lạt trong sương", "Chúng mình...", List.of("Bình minh"), "ROMANTIC",
+                "DRAFT", userId, List.of(photo1Id), Instant.now(), Instant.now()
+        );
+        when(draftPersistenceService.persistDraftAtomically(eq(userId), eq(coupleId), eq(albumId), eq(List.of(photo1Id)), eq(aiResult), eq("ROMANTIC")))
+                .thenReturn(expectedResponse);
+
+        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Thật vui", "ROMANTIC", true);
         MemoryStoryResponse res = storyService.createStoryDraft(userId, req);
 
         assertThat(res).isNotNull();
         assertThat(res.title()).isEqualTo("Đà Lạt trong sương");
         assertThat(res.status()).isEqualTo("DRAFT");
         assertThat(res.createdBy()).isEqualTo(userId);
-        assertThat(res.highlights()).containsExactly("Bình minh", "Hồ Xuân Hương");
-
-        verify(storyPhotoRepository).save(any(MemoryStoryPhoto.class));
     }
 
     @Test
     @DisplayName("Từ chối tạo Story khi thiếu Consent (consent=null hoặc consent=false) -> 400 AI_CONSENT_REQUIRED")
     void createStoryDraft_noConsent_rejected() {
-        CreateMemoryStoryRequest reqNull = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", null);
+        CreateMemoryStoryRequest reqNull = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", "ROMANTIC", null);
         assertThatThrownBy(() -> storyService.createStoryDraft(userId, reqNull))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> {
@@ -128,7 +142,7 @@ class MemoryStoryServiceTest {
                     assertThat(apiEx.code()).isEqualTo("AI_CONSENT_REQUIRED");
                 });
 
-        CreateMemoryStoryRequest reqFalse = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", false);
+        CreateMemoryStoryRequest reqFalse = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", "ROMANTIC", false);
         assertThatThrownBy(() -> storyService.createStoryDraft(userId, reqFalse))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> {
@@ -148,7 +162,7 @@ class MemoryStoryServiceTest {
         when(photoRepository.findById(photo1Id)).thenReturn(Optional.of(photo1));
         when(albumPhotoRepository.existsById(new AlbumPhotoId(albumId, photo1Id))).thenReturn(false);
 
-        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", true);
+        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", "ROMANTIC", true);
         assertThatThrownBy(() -> storyService.createStoryDraft(userId, req))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> {
@@ -161,16 +175,16 @@ class MemoryStoryServiceTest {
     }
 
     @Test
-    @DisplayName("Từ chối khi ảnh thuộc couple khác -> 403 CROSS_COUPLE_PHOTO")
+    @DisplayName("Từ chối khi ảnh thuộc về couple khác -> 403 CROSS_COUPLE_PHOTO")
     void createStoryDraft_crossCouplePhoto_rejected() {
         UUID otherCoupleId = UUID.randomUUID();
-        Photo otherPhoto = new Photo(photo1Id, otherCoupleId, userId, UUID.randomUUID(), "k3", "image/png", 1024);
+        Photo alienPhoto = new Photo(UUID.randomUUID(), otherCoupleId, UUID.randomUUID(), UUID.randomUUID(), "k", "image/png", 1024);
 
         when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.of(couple));
         when(albumRepository.findByIdAndCoupleId(albumId, coupleId)).thenReturn(Optional.of(album));
-        when(photoRepository.findById(photo1Id)).thenReturn(Optional.of(otherPhoto));
+        when(photoRepository.findById(alienPhoto.getId())).thenReturn(Optional.of(alienPhoto));
 
-        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(photo1Id), "Ghi chú", true);
+        CreateMemoryStoryRequest req = new CreateMemoryStoryRequest(albumId, List.of(alienPhoto.getId()), "Ghi chú", "ROMANTIC", true);
         assertThatThrownBy(() -> storyService.createStoryDraft(userId, req))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> {
@@ -183,20 +197,20 @@ class MemoryStoryServiceTest {
     }
 
     @Test
-    @DisplayName("Bảo mật DRAFT: Người tạo xem được DRAFT của mình, partner bị từ chối 403 DRAFT_ACCESS_DENIED")
+    @DisplayName("Bảo vệ quyền riêng tư bản nháp (Draft Privacy): Chỉ người tạo mới xem được DRAFT")
     void getStory_draftPrivacyEnforced() {
         UUID storyId = UUID.randomUUID();
-        MemoryStory draft = new MemoryStory(
-                storyId, coupleId, albumId, "Bản nháp riêng", "Nội dung...", "[]", "warm",
+        MemoryStory draftStory = new MemoryStory(
+                storyId, coupleId, albumId, "Bản nháp riêng", "Nội dung...", "[]", "ROMANTIC",
                 MemoryStoryStatus.DRAFT, userId
         );
 
         when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.of(couple));
         when(coupleRepository.findActiveCoupleByUserId(partnerId)).thenReturn(Optional.of(couple));
-        when(storyRepository.findByIdAndCoupleId(storyId, coupleId)).thenReturn(Optional.of(draft));
+        when(storyRepository.findByIdAndCoupleId(storyId, coupleId)).thenReturn(Optional.of(draftStory));
         when(storyPhotoRepository.findByIdStoryId(storyId)).thenReturn(Collections.emptyList());
 
-        // 1. Người tạo xem -> Thành công
+        // 1. Tác giả xem -> Thành công
         MemoryStoryResponse creatorRes = storyService.getStory(userId, storyId);
         assertThat(creatorRes).isNotNull();
         assertThat(creatorRes.title()).isEqualTo("Bản nháp riêng");
@@ -216,7 +230,7 @@ class MemoryStoryServiceTest {
     void getStory_bothMembersCanViewSaved() {
         UUID storyId = UUID.randomUUID();
         MemoryStory savedStory = new MemoryStory(
-                storyId, coupleId, albumId, "Câu chuyện chung", "Kỷ niệm...", "[]", "warm",
+                storyId, coupleId, albumId, "Câu chuyện chung", "Kỷ niệm...", "[]", "ROMANTIC",
                 MemoryStoryStatus.SAVED, userId
         );
 
@@ -235,12 +249,12 @@ class MemoryStoryServiceTest {
     void updateStoryDraft_lifecycleChecks() {
         UUID storyId = UUID.randomUUID();
         MemoryStory draft = new MemoryStory(
-                storyId, coupleId, albumId, "Tiêu đề cũ", "Nội dung cũ", "[]", "warm",
+                storyId, coupleId, albumId, "Tiêu đề cũ", "Nội dung cũ", "[]", "ROMANTIC",
                 MemoryStoryStatus.DRAFT, userId
         );
 
         when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.of(couple));
-        when(storyRepository.findByIdAndCoupleId(storyId, coupleId)).thenReturn(Optional.of(draft));
+        when(storyRepository.findByIdAndCoupleIdWithLock(storyId, coupleId)).thenReturn(Optional.of(draft));
         when(storyRepository.save(any(MemoryStory.class))).thenAnswer(inv -> inv.getArgument(0));
         when(storyPhotoRepository.findByIdStoryId(storyId)).thenReturn(Collections.emptyList());
 
@@ -248,23 +262,23 @@ class MemoryStoryServiceTest {
                 "Tiêu đề mới đã sửa",
                 "Nội dung mới chi tiết hơn...",
                 List.of("Điểm nhấn 1"),
-                "romantic"
+                "ROMANTIC"
         );
 
         // 1. Chỉnh sửa bản nháp -> Thành công
         MemoryStoryResponse updated = storyService.updateStoryDraft(userId, storyId, updateReq);
         assertThat(updated.title()).isEqualTo("Tiêu đề mới đã sửa");
         assertThat(updated.story()).isEqualTo("Nội dung mới chi tiết hơn...");
-        assertThat(updated.tone()).isEqualTo("romantic");
+        assertThat(updated.tone()).isEqualTo("ROMANTIC");
 
-        // 2. Chuyển story sang SAVED rồi thử sửa -> 400 CANNOT_EDIT_SAVED_STORY
+        // 2. Chuyển story sang SAVED rồi thử sửa -> 409 STORY_ALREADY_SAVED
         draft.setStatus(MemoryStoryStatus.SAVED);
         assertThatThrownBy(() -> storyService.updateStoryDraft(userId, storyId, updateReq))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> {
                     ApiException apiEx = (ApiException) ex;
-                    assertThat(apiEx.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-                    assertThat(apiEx.code()).isEqualTo("CANNOT_EDIT_SAVED_STORY");
+                    assertThat(apiEx.status()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(apiEx.code()).isEqualTo("STORY_ALREADY_SAVED");
                 });
     }
 
@@ -273,12 +287,12 @@ class MemoryStoryServiceTest {
     void saveStory_idempotentSuccess() {
         UUID storyId = UUID.randomUUID();
         MemoryStory story = new MemoryStory(
-                storyId, coupleId, albumId, "Kỷ niệm", "Nội dung...", "[]", "warm",
+                storyId, coupleId, albumId, "Kỷ niệm", "Nội dung...", "[]", "ROMANTIC",
                 MemoryStoryStatus.DRAFT, userId
         );
 
         when(coupleRepository.findActiveCoupleByUserId(userId)).thenReturn(Optional.of(couple));
-        when(storyRepository.findByIdAndCoupleId(storyId, coupleId)).thenReturn(Optional.of(story));
+        when(storyRepository.findByIdAndCoupleIdWithLock(storyId, coupleId)).thenReturn(Optional.of(story));
         when(storyRepository.save(any(MemoryStory.class))).thenAnswer(inv -> inv.getArgument(0));
         when(storyPhotoRepository.findByIdStoryId(storyId)).thenReturn(Collections.emptyList());
 
@@ -293,4 +307,3 @@ class MemoryStoryServiceTest {
         verify(storyRepository, times(1)).save(any(MemoryStory.class));
     }
 }
-

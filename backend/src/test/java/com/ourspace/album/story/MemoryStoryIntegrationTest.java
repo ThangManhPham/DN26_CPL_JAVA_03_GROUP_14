@@ -53,6 +53,7 @@ class MemoryStoryIntegrationTest {
     @Autowired private AlbumPhotoRepository albumPhotos;
     @Autowired private PhotoRepository photos;
     @Autowired private TokenService tokens;
+    @Autowired private com.ourspace.album.story.service.AiStoryRateLimiter rateLimiter;
 
     private User userA;
     private User userB;
@@ -91,6 +92,10 @@ class MemoryStoryIntegrationTest {
         tokenB = tokens.issue(userB.getId());
         tokenC = tokens.issue(userC.getId());
 
+        rateLimiter.resetForTest(userA.getId());
+        rateLimiter.resetForTest(userB.getId());
+        rateLimiter.resetForTest(userC.getId());
+
         // Setup Album for Couple 1
         album1 = albums.save(new Album(UUID.randomUUID(), couple1.getId(), "Chuyến đi Đà Lạt", "Kỷ niệm mùa hoa dã quỳ", null, userA.getId()));
 
@@ -121,6 +126,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photo1.getId()),
                 "Ghi chú",
+                "ROMANTIC",
                 true
         );
 
@@ -139,6 +145,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photo1.getId()),
                 "Ghi chú",
+                "ROMANTIC",
                 false
         );
 
@@ -160,6 +167,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photoNotInAlbum.getId()),
                 "Ghi chú",
+                "ROMANTIC",
                 true
         );
 
@@ -179,6 +187,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photo1.getId(), photo2.getId()),
                 "Chuyến đi đầu tiên của chúng mình đến xứ sở ngàn hoa",
+                "ROMANTIC",
                 true
         );
 
@@ -251,13 +260,13 @@ class MemoryStoryIntegrationTest {
                 .andExpect(jsonPath("$.status").value("SAVED"))
                 .andExpect(jsonPath("$.title").value("Đà Lạt - Kỷ Niệm Tình Yêu Của Chúng Mình"));
 
-        // 8. Không thể sửa câu chuyện đã lưu -> 400 CANNOT_EDIT_SAVED_STORY
+        // 8. Không thể sửa câu chuyện đã lưu -> 409 STORY_ALREADY_SAVED
         mvc.perform(put("/api/v1/ai/memory-stories/" + storyId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(authorEdit)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("CANNOT_EDIT_SAVED_STORY"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("STORY_ALREADY_SAVED"));
 
         // 9. Lưu lại một câu chuyện đã lưu là idempotent -> 200 SAVED
         mvc.perform(post("/api/v1/ai/memory-stories/" + storyId + "/save")
@@ -287,6 +296,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photo1.getId()),
                 "Nháp bí mật",
+                "ROMANTIC",
                 true
         );
 
@@ -318,6 +328,7 @@ class MemoryStoryIntegrationTest {
                 album1.getId(),
                 List.of(photo1.getId()),
                 "Kỷ niệm couple 1",
+                "ROMANTIC",
                 true
         );
         String res = mvc.perform(post("/api/v1/ai/memory-stories")

@@ -9,7 +9,7 @@ public class AiStoryProperties {
 
     private String provider = "gemini";
     private String apiKey = "";
-    private String model = "gemini-1.5-flash";
+    private String model = "gemini-2.0-flash";
     private int timeoutMs = 15000;
     private int maxTokens = 1024;
     private int rateLimitWindowMinutes = 10;

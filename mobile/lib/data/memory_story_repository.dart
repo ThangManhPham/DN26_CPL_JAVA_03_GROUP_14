@@ -225,8 +225,15 @@ class HttpMemoryStoryRepository implements MemoryStoryRepository {
       throw MemoryStoryException(message ?? 'Câu chuyện hoặc Album không tồn tại.', code: code ?? 'NOT_FOUND');
     }
 
+    if (response.statusCode == 409) {
+      if (code == 'STORY_ALREADY_SAVED') {
+        throw MemoryStoryException('Câu chuyện đã được lưu vào Album và không thể chỉnh sửa.', code: code);
+      }
+      throw MemoryStoryException(message ?? 'Dữ liệu đã bị thay đổi bởi thao tác khác. Vui lòng tải lại.', code: code ?? 'CONFLICT');
+    }
+
     if (response.statusCode == 429) {
-      throw MemoryStoryException('Bạn đã yêu cầu tạo câu chuyện quá nhanh. Vui lòng chờ 1 phút trước khi thử lại.', code: code ?? 'AI_SUBMIT_LIMIT_EXCEEDED');
+      throw MemoryStoryException('Yêu cầu AI đang được xử lý hoặc bạn đã gửi yêu cầu quá nhanh. Vui lòng chờ 1 phút trước khi thử lại.', code: code ?? 'AI_SUBMIT_LIMIT_EXCEEDED');
     }
 
     if (response.statusCode == 502 || response.statusCode == 503) {

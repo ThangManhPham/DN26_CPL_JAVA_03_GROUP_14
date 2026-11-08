@@ -2,8 +2,8 @@
 
 - **Tác giả (Member 4)**: Nguyen Dinh Long (`dinhlong235` / `lngnguyen94@gmail.com`)
 - **Nhánh triển khai**: `feature/S3-M4-ai-memory-story`
-- **Mục tiêu**: US-05 - Sáng tạo câu chuyện kỷ niệm tình yêu từ Album bằng Generative AI (Database $\rightarrow$ Backend $\rightarrow$ Flutter UI $\rightarrow$ Unit & Integration Tests $\rightarrow$ Privacy & Security Enforcements).
-- **Trạng thái**: Hoàn thành toàn diện, 102/102 backend tests passed, sẵn sàng nghiệm thu và review.
+- **Mục tiêu**: US-05 - Sáng tạo câu chuyện kỷ niệm tình yêu từ Album bằng Generative AI (Database $\rightarrow$ Backend $\rightarrow$ Flutter UI $\rightarrow$ Concurrency & Transaction Hardening $\rightarrow$ Testing $\rightarrow$ Handover).
+- **Trạng thái**: Hoàn thành toàn diện, 124/124 backend tests passed (H2), sẵn sàng nghiệm thu và review.
 
 ---
 
@@ -17,21 +17,26 @@
   - M5: Docker & CI configurations
 - **Xử lý xung đột merge**: Đã giải quyết 3 điểm xung đột sạch sẽ tại commit `26e5c23`:
   - `backend/src/main/resources/db/h2-migration/V5__create_albums.sql` (đồng bộ đường dẫn H2 migration)
-  - `backend/src/test/java/com/ourspace/OurSpaceApplicationTests.java` (nâng assertion phiên bản migration lên `"7"`)
+  - `backend/src/test/java/com/ourspace/OurSpaceApplicationTests.java` (nâng assertion phiên bản migration lên `"8"`)
   - `mobile/lib/main.dart` (tiếp nhận cấu trúc AppRouter khai báo chuẩn từ `main`).
 
 ---
 
-## 2. Thiết kế Cơ sở Dữ liệu & Flyway Migration V7
+## 2. Thiết kế Cơ sở Dữ liệu & Flyway Migration V7 & V8
 
-Hệ thống bổ sung migration `V7` nối tiếp phiên bản `V6` của M3, đảm bảo thứ tự liên tục và tương thích cả PostgreSQL 16 lẫn H2 In-Memory (dùng cho automated tests):
+Hệ thống bổ sung migration `V7` và `V8` nối tiếp phiên bản `V6` của M3, đảm bảo tính liên tục của chuỗi migration và tương thích cả PostgreSQL 16 lẫn H2 In-Memory:
 
 ### 2.1. File migration
-- PostgreSQL: `backend/src/main/resources/db/migration/V7__create_memory_stories.sql`
-- H2 Test: `backend/src/main/resources/db/h2-migration/V7__create_memory_stories.sql`
+- **V7 (Tạo bảng Memory Stories & Photos)**:
+  - PostgreSQL: `backend/src/main/resources/db/migration/V7__create_memory_stories.sql`
+  - H2 Test: `backend/src/main/resources/db/h2-migration/V7__create_memory_stories.sql`
+- **V8 (Thêm cột Version hỗ trợ Optimistic Locking)**:
+  - PostgreSQL: `backend/src/main/resources/db/migration/V8__add_memory_stories_version.sql`
+  - H2 Test: `backend/src/main/resources/db/h2-migration/V8__add_memory_stories_version.sql`
 
-### 2.2. Cấu trúc bảng
+### 2.2. Cấu trúc bảng và lược đồ
 ```sql
+-- V7__create_memory_stories.sql
 CREATE TABLE memory_stories (
     id UUID PRIMARY KEY,
     couple_id UUID NOT NULL,
@@ -64,99 +69,100 @@ CREATE TABLE memory_story_photos (
 
 CREATE INDEX idx_memory_stories_album ON memory_stories(album_id, status);
 CREATE INDEX idx_memory_stories_couple ON memory_stories(couple_id, created_at DESC);
+
+-- V8__add_memory_stories_version.sql
+ALTER TABLE memory_stories ADD COLUMN version BIGINT NOT NULL DEFAULT 0;
 ```
 
-### 2.3. Quy ước quan hệ & OD-03 Unpair
-- Quan hệ ràng buộc khóa ngoại với `couples` và `albums` đi kèm `ON DELETE CASCADE`.
-- Khi cặp đôi thực hiện hủy ghép đôi hoặc xóa Album, toàn bộ Memory Stories liên quan sẽ được dọn dẹp sạch sẽ theo chu trình cascade database mà không để lại dữ liệu mồ côi.
+### 2.3. Quy ước quan hệ & Chính sách Unpair OD-03
+- **Ràng buộc khóa ngoại**: Đi kèm `ON DELETE CASCADE` trên `couples` và `albums` để đảm bảo toàn vẹn dữ liệu ở cấp cơ sở dữ liệu khi một entity cha bị xóa.
+- **Chính sách Unpair OD-03**: Thao tác hủy ghép đôi (unpair) hiện đang bị chặn theo quy định nhóm (tạm ngưng chờ thống nhất chính sách lưu trữ / xóa dữ liệu OD-03). Member 4 tuyệt đối **không tự ý triển khai xóa dữ liệu người dùng** khi chính sách chưa được phê duyệt chính thức.
 
 ---
 
-## 3. Kiến trúc Backend & AI Integration
+## 3. Kiến trúc Backend, AI Integration & Hardening
 
-### 3.1. Các tầng mã nguồn triển khai
-- **Entities**:
-  - `MemoryStory.java`: Ánh xạ bảng `memory_stories`, hỗ trợ cập nhật nháp, lưu chính thức (`save()`), và kiểm tra trạng thái (`isDraft()`, `isSaved()`).
-  - `MemoryStoryPhoto.java` & `MemoryStoryPhotoId.java`: Ánh xạ liên kết nhiều-nhiều giữa Story và Photo có thứ tự.
-  - `MemoryStoryStatus.java`: Enum `DRAFT`, `SAVED`.
-- **Repositories**:
-  - `MemoryStoryRepository.java`: Truy vấn story theo ID, theo Couple, và theo Album lọc trạng thái SAVED hoặc theo tác giả.
-  - `MemoryStoryPhotoRepository.java`: Quản lý danh sách ảnh đính kèm câu chuyện.
-- **DTOs**:
-  - `CreateMemoryStoryRequest`: Payload tạo story (`albumId`, `selectedPhotoIds`, `notes`, `tone`, `@NotNull consent`).
-  - `UpdateMemoryStoryRequest`: Payload chỉnh sửa bản nháp (`title`, `story`, `highlights`, `tone`).
-  - `MemoryStoryResponse`: Response chuẩn trả về cho client.
-  - `AiGeneratedStoryDto`: DTO ánh xạ JSON phản hồi từ LLM.
-- **AI Core Components**:
-  - `AiStoryClient.java`: Interface trừu tượng hóa dịch vụ AI.
-  - `GeminiAiStoryClient.java`: Triển khai tích hợp Google Gemini REST API (`gemini-1.5-flash`), cấu hình timeout 15s, rate limit error handling (429), bóc tách JSON an toàn loại bỏ markdown fences (` ```json `), và kiểm định schema chặt chẽ.
-  - `MockAiStoryClient.java`: Mock client chạy 100% offline, sinh nội dung mẫu đầy đủ điểm nhấn (highlights) cho môi trường test mà không cần API key.
-  - `AiPromptBuilder.java`: Xây dựng system prompt định hướng văn phong lãng mạn, ấm áp của OurSpace, kèm bộ lọc phòng chống tấn công Prompt Injection (lọc bỏ thẻ điều khiển, prompt override và ký tự đặc biệt).
-  - `AiStoryConfiguration.java`: Tự động nạp `GeminiAiStoryClient` khi có cấu hình `ourspace.ai.provider=gemini`, ngược lại dùng `MockAiStoryClient`.
-- **Service Layer (`MemoryStoryService.java`)**:
-  - **Kiểm tra sự đồng thuận**: Bắt buộc `consent=true`, nếu không trả về lỗi `400 AI_CONSENT_REQUIRED`.
-  - **Kiểm định dữ liệu trước AI**: Xác thực người dùng có cặp đôi active, album thuộc cặp đôi, và tất cả ảnh được chọn phải thuộc về album đó (`PHOTO_NOT_IN_ALBUM`).
-  - **Rate Limiting**: Giới hạn tần suất tạo câu chuyện (cooldown 60s per user/album), trả về `429 AI_SUBMIT_LIMIT_EXCEEDED` khi vượt ngưỡng.
-  - **Cuộc gọi mạng ngoài không giữ Transaction**: Tách biệt bước gọi AI ra khỏi transaction cơ sở dữ liệu (`Non-transactional AI call`), loại bỏ nguy cơ cạn kiệt connection pool hay lock database.
-  - **Quyền riêng tư bản nháp (Draft Privacy)**: Bản nháp (`DRAFT`) chỉ có tác giả tạo ra mới có quyền đọc và chỉnh sửa (`DRAFT_ACCESS_DENIED` 403 nếu đối phương cố tình truy cập).
-  - **Lưu câu chuyện (Publish / Save)**: Tác giả chuyển trạng thái sang `SAVED`. Thao tác này là idempotent (lưu lại không gây lỗi). Khi đã `SAVED`, cả hai thành viên trong cặp đôi đều có thể xem trong Album.
-  - **Tính bất biến của câu chuyện đã lưu**: Không cho phép sửa câu chuyện đã `SAVED` (`400 CANNOT_EDIT_SAVED_STORY`).
-- **REST Controller (`MemoryStoryController.java`)**:
-  - `POST /api/v1/ai/memory-stories`: Tạo bản nháp story với AI (201 Created).
-  - `GET /api/v1/ai/memory-stories/{id}`: Xem chi tiết story (200 OK).
-  - `PUT /api/v1/ai/memory-stories/{id}`: Cập nhật bản nháp story (200 OK).
-  - `POST /api/v1/ai/memory-stories/{id}/save`: Lưu câu chuyện vào Album (200 OK).
-  - `GET /api/v1/albums/{albumId}/stories`: Danh sách câu chuyện trong Album (đã lọc quyền riêng tư).
+### 3.1. Phân định Transaction & Khắc phục Proxy Demarcation
+- **Vấn đề đã khắc phục**: Phương thức `createStoryDraft` trước đây gọi phương thức lưu nháp trong cùng bean, khiến Spring AOP proxy bị bypass và không áp dụng được `@Transactional`.
+- **Giải pháp**: Tách toàn bộ logic lưu trữ nguyên tử sang service riêng biệt: `MemoryStoryDraftPersistenceService`.
+  - Service này sử dụng `TransactionTemplate` kết hợp `@Transactional` để đảm bảo lưu trữ Story cùng danh sách `memory_story_photos` một cách nguyên tử hoàn toàn. Nếu lưu bất kỳ ảnh nào thất bại, toàn bộ Story sẽ bị rollback tức thì.
+  - **Lời gọi AI provider được thực hiện hoàn toàn ngoài transaction**: Đảm bảo thread không giữ kết nối cơ sở dữ liệu trong suốt thời gian chờ phản hồi mạng từ AI (tránh cạn kiệt Connection Pool HikariCP).
+  - **Kiểm tra lại dữ liệu sau khi AI trả về (Post-AI re-checks)**: Khi nhận được kết quả từ AI, trước khi ghi dữ liệu, hệ thống xác thực lại: couple vẫn active, album vẫn tồn tại và thuộc couple, từng ảnh vẫn tồn tại và vẫn thuộc về album.
+
+### 3.2. Giới hạn tần suất (Rate Limiting) & Chống Race Condition
+- **Vấn đề đã khắc phục**: Việc đếm bản nháp DRAFT trong DB dễ bị lọt qua khi nhiều request gửi đồng thời hoặc khi bản nháp đã chuyển sang SAVED.
+- **Giải pháp**: `AiStoryRateLimiter` quản lý giữ chỗ nguyên tử trong bộ nhớ (`ConcurrentHashMap.compute`):
+  - **Giữ chỗ nguyên tử (Atomic Reservation)**: Ngay trước khi gọi provider, kiểm tra và giữ chỗ ngay lập tức cho `userId`.
+  - **Giới hạn đồng thời**: Mỗi user chỉ được phép có tối đa 1 yêu cầu AI đang thực thi (`in-flight`).
+  - **Cửa sổ Cooldown**: Sau khi tạo thành công, user phải chờ 60 giây trước khi có thể yêu cầu tạo câu chuyện mới.
+  - **Xử lý lỗi**: Nếu cuộc gọi AI gặp sự cố (timeout, 429, lỗi mạng), slot giữ chỗ được giải phóng ngay lập tức để user có thể thử lại mà không bị phạt chờ cooldown.
+  - **Từ chối**: Nếu vi phạm rate limit, hệ thống trả về HTTP 429 `AI_SUBMIT_LIMIT_EXCEEDED`.
+
+### 3.3. Kiểm soát đồng thời khi Cập nhật và Lưu (Concurrency & Versioning)
+- **Optimistic Locking**: Bổ sung trường `@Version private Long version = 0L;` trên `MemoryStory`. Mọi thay đổi qua `updateStoryDraft` và `saveStory` đều làm tăng version.
+- **Pessimistic Lock**: Truy vấn `findByIdAndCoupleIdWithLock` sử dụng `@Lock(LockModeType.PESSIMISTIC_WRITE)` ngăn chặn race condition khi hai thao tác đồng thời cố tình cập nhật hoặc lưu cùng một bản ghi.
+- **Bảo vệ tính toàn vẹn trạng thái**: Một khi câu chuyện đã chuyển sang `SAVED`, hệ thống từ chối mọi yêu cầu chỉnh sửa bằng HTTP 409 `STORY_ALREADY_SAVED`, ngăn chặn việc đưa câu chuyện đã duyệt về `DRAFT` hoặc ghi đè nội dung. Thao tác `saveStory` được thiết kế có tính Idempotent.
+
+### 3.4. Mô hình Gemini & An toàn Bảo mật Lỗi
+- **Cập nhật Model**: Chuyển mặc định sang `gemini-2.0-flash` (dòng mô hình chính thức, ổn định và hiệu năng cao của Google). Cho phép cấu hình linh hoạt qua biến môi trường `AI_MODEL` hoặc `ourspace.ai.model`.
+- **Tách biệt Mock vs Production**:
+  - `MockAiStoryClient`: Tự động kích hoạt trong môi trường kiểm thử tự động hoặc khi `ourspace.ai.provider=mock`, bảo đảm không gọi API bên ngoài hay phát sinh chi phí trong CI/CD.
+  - `GeminiAiStoryClient`: Kích hoạt khi `ourspace.ai.provider=gemini` và có API key hợp lệ. Hỗ trợ inject `HttpClient` cho unit testing và cấu hình timeout.
+- **Sanitized Error Logging**: Tuyệt đối không log URL chứa query parameter `?key=...` hoặc chi tiết ngoại lệ mạng có khả năng rò rỉ API key ra log máy chủ hoặc trả về client. Mã lỗi chuẩn hóa: `AI_TIMEOUT` (504), `AI_RATE_LIMIT` (429), `AI_PROVIDER_ERROR` (502), `AI_CALL_FAILED` (500).
+
+### 3.5. Đồng bộ Contract `tone` & Strict JSON Validation
+- Hệ thống hỗ trợ các tone: `ROMANTIC`, `HUMOROUS`, `POETIC`, `NOSTALGIC`.
+- Đồng bộ hoàn toàn giữa Flutter UI, `CreateMemoryStoryRequest`, `UpdateMemoryStoryRequest`, `MemoryStoryService`, `AiPromptBuilder` và `GeminiAiStoryClient`.
+- Đã kiểm thử với cấu hình Jackson nghiêm ngặt (`fail-on-unknown-properties: true`), bảo đảm payload gửi từ Flutter được backend chấp nhận chính xác.
+
+### 3.6. Phòng vệ Prompt Injection & Kiểm định đầu ra AI
+- **Phòng vệ theo chiều sâu (Defense in Depth)**: `AiPromptBuilder.sanitize()` lọc bỏ ký tự điều khiển, giới hạn độ dài, ngăn chặn các chuỗi override instructions phổ biến. Lưu ý: Đây là biện pháp giảm thiểu rủi ro theo chiều sâu, không thể xem là lá chắn tuyệt đối chống lại mọi kỹ thuật injection tinh vi.
+- **Kiểm định đầu ra khắt khe (`parseGeminiResponse`)**:
+  - Loại bỏ markdown code blocks (` ```json ... `).
+  - Bắt buộc các trường `title` (1-200 ký tự), `story` (1-5000 ký tự).
+  - `highlights` bắt buộc là mảng JSON (lấy 1-5 phần tử, mỗi phần tử tối đa 200 ký tự).
+  - Phản hồi sai schema ném lỗi `402 AI_INVALID_RESPONSE`.
 
 ---
 
 ## 4. Giao diện Mobile Flutter
 
-Triển khai giao diện người dùng trọn vẹn, tuân thủ bảng màu và Design System của OurSpace (`AppColors.rose`, `AppColors.softRose`, Material 3):
+Triển khai giao diện theo đúng OurSpace Design System (`AppColors.rose`, `AppColors.softRose`, Material 3):
 
 1. **Repository Client (`mobile/lib/data/memory_story_repository.dart`)**:
-   - `HttpMemoryStoryRepository`: Tích hợp chuẩn REST backend, bóc tách lỗi chi tiết (`AI_CONSENT_REQUIRED`, `DRAFT_ACCESS_DENIED`, `AI_SUBMIT_LIMIT_EXCEEDED`, `AI_PROVIDER_ERROR`).
-   - `MockMemoryStoryRepository`: Hỗ trợ chạy giả lập khi `useMock=true`.
-2. **Chi tiết Album & Mục Câu chuyện AI (`mobile/lib/album_detail_screen.dart`)**:
+   - `HttpMemoryStoryRepository`: Tích hợp đầy đủ các mã lỗi HTTP 400, 401, 403, 404, 409 (`STORY_ALREADY_SAVED`), 429 (`AI_SUBMIT_LIMIT_EXCEEDED`), 502/503 (`AI_PROVIDER_ERROR`).
+   - `MockMemoryStoryRepository`: Dùng cho chế độ offline/mock mode.
+2. **Chi tiết Album & Tạo Story (`mobile/lib/album_detail_screen.dart`)**:
    - Nút hành động AI trên AppBar và banner "Tạo câu chuyện kỷ niệm với AI".
    - Danh sách carousel các câu chuyện đã tạo (huy hiệu "Đã lưu" hoặc "Bản nháp", nhãn tone cảm xúc).
    - Modal Bottom Sheet tạo câu chuyện AI:
-     - Chọn ảnh trong album (tối đa 20 ảnh, có bộ đếm và preview thumbnail).
+     - Chọn ảnh trong album (tối đa 20 ảnh, preview thumbnail).
      - Nhập gợi ý / ghi chú kỷ niệm (tùy chọn).
-     - Chọn Tone phong cách (Lãng mạn, Hài hước, Sâu lắng, Thơ mộng).
+     - Lựa chọn Tone phong cách: Lãng mạn, Hài hước, Thơ mộng, Hoài niệm.
      - **Hộp thoại đồng thuận (Mandatory Consent Checkbox)**: Buộc người dùng đánh dấu đồng ý trước khi nút bấm được kích hoạt.
      - Trạng thái loading quay vòng thân thiện trong khi AI đang viết câu chuyện.
 3. **Màn hình Câu chuyện kỷ niệm (`mobile/lib/memory_story_screen.dart`)**:
    - Hiển thị tiêu đề, lời kể AI, điểm nhấn đáng nhớ (highlights).
    - Thẻ cảnh báo quyền riêng tư khi ở trạng thái bản nháp.
-   - Hộp thoại chỉnh sửa tiêu đề, nội dung, điểm nhấn.
+   - Hộp thoại chỉnh sửa tiêu đề, nội dung, điểm nhấn, phong cách.
    - Nút "Lưu vào Album" (chuyển sang `SAVED`) có thông báo SnackBar xác nhận.
-4. **Điều hướng từ Couple Home (`mobile/lib/features/pairing/presentation/couple_home_screen.dart`)**:
-   - Bổ sung nút lối vào "Album & Kỷ niệm của hai bạn" ngay tại màn hình chính Couple Home.
-5. **Kiểm thử Mobile Unit Tests (`mobile/test/memory_story_repository_test.dart`)**:
-   - Đã viết 10 kịch bản kiểm thử toàn diện cho HttpMemoryStoryRepository và MockMemoryStoryRepository.
 
 ---
 
-## 5. Chính sách Bảo mật, Riêng tư & An toàn AI
+## 5. Kết quả Kiểm thử Thực tế & Tình trạng Môi trường
 
-1. **Không gửi dữ liệu ảnh nhạy cảm lên Cloud AI**:
-   - Quá trình tạo story chỉ gửi tiêu đề album, ghi chú văn bản do người dùng nhập và số lượng ảnh. Tuyệt đối không gửi raw binary ảnh, URL ảnh nhạy cảm hoặc token riêng tư lên Gemini API.
-2. **User Consent bắt buộc**:
-   - Phải có sự đồng thuận rõ ràng từ người dùng (`consent: true`). Nếu thiếu, API từ chối ngay lập tức tại tầng nghiệp vụ.
-3. **Quyền riêng tư hai lớp**:
-   - Lớp 1: Cô lập triệt để giữa các cặp đôi khác nhau (Cross-couple isolation).
-   - Lớp 2: Bảo vệ bản nháp cá nhân (Draft Privacy) - đối tác không thể đọc trộm hay sửa bản nháp trước khi tác giả hoàn thiện và bấm Lưu.
-4. **Phòng vệ Prompt Injection**:
-   - Bộ lọc `AiPromptBuilder.sanitize()` loại bỏ các đoạn văn bản chứa câu lệnh thao túng system instructions, thẻ markdown nguy hiểm hoặc code độc hại.
-5. **Rate Limiting**:
-   - Ngăn chặn lạm dụng token AI bằng cơ chế rate limit 60 giây giữa các lần yêu cầu.
+### 5.1. Bảng phân định trạng thái kiểm thử theo môi trường
 
----
+| Hạng mục kiểm thử | Môi trường | Trạng thái | Chi tiết kết quả |
+| :--- | :--- | :---: | :--- |
+| **Backend Unit & Integration Tests** | H2 In-Memory, Flyway V1-V8 | **PASS** | **124/124 tests PASS** (0 Failures, 0 Errors, 0 Skipped). Thời gian: 01:15 min. |
+| **AI Mock Client Tests** | Offline Mock Provider | **PASS** | 100% tests chạy tự động không cần Internet hay API key bên ngoài. |
+| **Gemini Client Parsing & Network Error Tests** | HTTP Mock / Injected Client | **PASS** | 10/10 tests PASS: parse hợp lệ, bóc markdown, timeout, 429, schema sai, không lộ key. |
+| **Concurrency & Non-Tx Demarcation Tests** | H2 SpringBootTest | **PASS** | 6/6 tests PASS: atomic rate limit, non-tx AI call, rollback khi lỗi lưu ảnh, lock bảo vệ SAVED. |
+| **PostgreSQL 16 Migration & Verification** | Docker / Real PostgreSQL | **BLOCKED** | Môi trường cục bộ Windows thiếu Docker CLI (`docker : The term 'docker' is not recognized`). |
+| **Flutter Analyze & UI Widget Tests** | Flutter SDK | **BLOCKED** | Môi trường cục bộ Windows thiếu Flutter SDK (`flutter : The term 'flutter' is not recognized`). |
 
-## 6. Kết quả Kiểm thử Thực tế
-
-### 6.1. Backend Test Suite (`mvnw.cmd test`)
+### 5.2. Chi tiết kết quả Backend Test Suite (`mvnw.cmd test`)
 ```
 [INFO] -------------------------------------------------------
 [INFO]  T E S T S
@@ -165,10 +171,14 @@ Triển khai giao diện người dùng trọn vẹn, tuân thủ bảng màu v�
 [INFO] Running com.ourspace.album.AlbumIntegrationTest ... [PASS]
 [INFO] Running com.ourspace.album.service.AlbumServiceTest ... [PASS]
 [INFO] Running com.ourspace.album.story.ai.AiPromptBuilderTest ... [PASS]
-[INFO] Running com.ourspace.album.story.service.MemoryStoryServiceTest ... [PASS]
+[INFO] Running com.ourspace.album.story.ai.GeminiAiStoryClientTest ... [PASS] (10 tests)
+[INFO] Running com.ourspace.album.story.FlutterContractPayloadTest ... [PASS] (Strict Jackson)
+[INFO] Running com.ourspace.album.story.MemoryStoryConcurrencyAndLockingTest ... [PASS] (3 tests)
 [INFO] Running com.ourspace.album.story.MemoryStoryIntegrationTest ... [PASS]
+[INFO] Running com.ourspace.album.story.MemoryStoryNonTransactionalIntegrationTest ... [PASS] (3 tests)
+[INFO] Running com.ourspace.album.story.service.MemoryStoryServiceTest ... [PASS]
 [INFO] Running com.ourspace.ApiContractAndSecurityTests ... [PASS]
-[INFO] Running com.ourspace.OurSpaceApplicationTests ... [PASS] (Flyway V7 verified)
+[INFO] Running com.ourspace.OurSpaceApplicationTests ... [PASS] (Flyway V8 verified)
 [INFO] Running com.ourspace.couplespace.CalendarIntegrationTests ... [PASS]
 [INFO] Running com.ourspace.identity.AuthIntegrationTest ... [PASS]
 [INFO] Running com.ourspace.pairing.PairingConcurrencyTest ... [PASS]
@@ -176,49 +186,54 @@ Triển khai giao diện người dùng trọn vẹn, tuân thủ bảng màu v�
 [INFO] Running com.ourspace.photo.PhotoIntegrationTest ... [PASS]
 ...
 [INFO] Results:
-[INFO] Tests run: 102, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 124, Failures: 0, Errors: 0, Skipped: 0
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
 ```
-- **Tổng số tests**: 102/102 PASS (0 Failures, 0 Errors, 0 Skipped).
-- **Flyway V7**: Đã được thực thi và xác nhận qua Spring Boot context test.
-- **Hệ thống chạy 100% offline**: Không cần cấp API key bên ngoài nhờ `MockAiStoryClient`.
-
-### 6.2. Flutter Environment Status
-- **Trạng thái**: `BLOCKED` trên máy cục bộ do Flutter SDK chưa được cài đặt vào PATH môi trường Windows (`'flutter' is not recognized`).
-- **Mã nguồn Dart**: Đã được rà soát thủ công, tuân thủ đầy đủ types, design theme `AppColors`, và viết sẵn bộ test `memory_story_repository_test.dart`.
 
 ---
 
-## 7. Danh sách file thay đổi & tạo mới
+## 6. Danh sách tập tin thay đổi & tạo mới
 
-### Backend:
+### Database & Migrations:
 - `backend/src/main/resources/db/migration/V7__create_memory_stories.sql`
 - `backend/src/main/resources/db/h2-migration/V7__create_memory_stories.sql`
+- `backend/src/main/resources/db/migration/V8__add_memory_stories_version.sql`
+- `backend/src/main/resources/db/h2-migration/V8__add_memory_stories_version.sql`
+
+### Backend Source:
 - `backend/src/main/resources/application.yml`
 - `backend/src/test/resources/application-test.yml`
 - `.env.example`
-- `backend/src/main/java/com/ourspace/album/story/entity/MemoryStory.java`
+- `backend/src/main/java/com/ourspace/album/story/entity/MemoryStory.java` (thêm `@Version version`)
 - `backend/src/main/java/com/ourspace/album/story/entity/MemoryStoryPhoto.java`
 - `backend/src/main/java/com/ourspace/album/story/entity/MemoryStoryPhotoId.java`
 - `backend/src/main/java/com/ourspace/album/story/entity/MemoryStoryStatus.java`
-- `backend/src/main/java/com/ourspace/album/story/repository/MemoryStoryRepository.java`
+- `backend/src/main/java/com/ourspace/album/story/repository/MemoryStoryRepository.java` (thêm `findByIdAndCoupleIdWithLock`)
 - `backend/src/main/java/com/ourspace/album/story/repository/MemoryStoryPhotoRepository.java`
-- `backend/src/main/java/com/ourspace/album/story/dto/CreateMemoryStoryRequest.java`
+- `backend/src/main/java/com/ourspace/album/story/dto/CreateMemoryStoryRequest.java` (thêm `@Size(max=50) tone`)
 - `backend/src/main/java/com/ourspace/album/story/dto/UpdateMemoryStoryRequest.java`
 - `backend/src/main/java/com/ourspace/album/story/dto/AiGeneratedStoryDto.java`
 - `backend/src/main/java/com/ourspace/album/story/dto/MemoryStoryResponse.java`
-- `backend/src/main/java/com/ourspace/album/story/ai/AiPromptBuilder.java`
-- `backend/src/main/java/com/ourspace/album/story/ai/AiStoryProperties.java`
 - `backend/src/main/java/com/ourspace/album/story/ai/AiStoryClient.java`
+- `backend/src/main/java/com/ourspace/album/story/ai/AiStoryProperties.java` (default `gemini-2.0-flash`)
 - `backend/src/main/java/com/ourspace/album/story/ai/MockAiStoryClient.java`
-- `backend/src/main/java/com/ourspace/album/story/ai/GeminiAiStoryClient.java`
+- `backend/src/main/java/com/ourspace/album/story/ai/GeminiAiStoryClient.java` (schema validation, sanitized logging, HttpClient injection)
+- `backend/src/main/java/com/ourspace/album/story/ai/AiPromptBuilder.java` (tone mapping & defense-in-depth sanitization)
 - `backend/src/main/java/com/ourspace/album/story/ai/AiStoryConfiguration.java`
-- `backend/src/main/java/com/ourspace/album/story/service/MemoryStoryService.java`
+- `backend/src/main/java/com/ourspace/album/story/service/AiStoryRateLimiter.java` (atomic in-flight reservation & cooldown)
+- `backend/src/main/java/com/ourspace/album/story/service/MemoryStoryDraftPersistenceService.java` (atomic persistence & post-AI validation)
+- `backend/src/main/java/com/ourspace/album/story/service/MemoryStoryService.java` (rate limiter, non-tx AI call, pessimistic lock)
 - `backend/src/main/java/com/ourspace/album/story/controller/MemoryStoryController.java`
-- `backend/src/test/java/com/ourspace/OurSpaceApplicationTests.java`
+
+### Backend Tests:
+- `backend/src/test/java/com/ourspace/OurSpaceApplicationTests.java` (Flyway V8 assert)
 - `backend/src/test/java/com/ourspace/album/story/ai/AiPromptBuilderTest.java`
+- `backend/src/test/java/com/ourspace/album/story/ai/GeminiAiStoryClientTest.java` (10 unit tests)
+- `backend/src/test/java/com/ourspace/album/story/FlutterContractPayloadTest.java` (strict Jackson test)
+- `backend/src/test/java/com/ourspace/album/story/MemoryStoryConcurrencyAndLockingTest.java` (3 concurrency tests)
+- `backend/src/test/java/com/ourspace/album/story/MemoryStoryNonTransactionalIntegrationTest.java` (3 non-tx demarcation tests)
 - `backend/src/test/java/com/ourspace/album/story/service/MemoryStoryServiceTest.java`
 - `backend/src/test/java/com/ourspace/album/story/MemoryStoryIntegrationTest.java`
 
@@ -230,5 +245,5 @@ Triển khai giao diện người dùng trọn vẹn, tuân thủ bảng màu v�
 - `mobile/lib/features/pairing/presentation/couple_home_screen.dart`
 - `mobile/test/memory_story_repository_test.dart`
 
-### Tài liệu:
+### Tài liệu bàn giao:
 - `docs/18-m4-sprint3-ai-memory-story.md`
