@@ -14,6 +14,7 @@ import 'core/theme/app_theme.dart';
 import 'data/photo_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/calendar/data/calendar_repository.dart';
+import 'features/calendar/data/anniversary_notifications.dart';
 import 'features/pairing/data/pairing_repository.dart';
 import 'features/timeline/data/timeline_repository.dart';
 import 'firebase_options.dart';
@@ -123,7 +124,12 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
   void initState() {
     super.initState();
     widget.auth.addListener(_syncPushRegistration);
-    widget.auth.restore().whenComplete(_syncPushRegistration);
+    widget.auth.restore().whenComplete(() {
+      _syncPushRegistration();
+      if (!widget.auth.isAuthenticated) {
+        const AnniversaryNotifications().clear();
+      }
+    });
   }
 
   @override
@@ -140,6 +146,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
     final previous = _registeredPushToken;
     _registeredPushToken = token;
     if (previous != null) {
+      const AnniversaryNotifications().clear();
       widget.push?.deactivate(previous);
       IosWidgetBridge.clear();
       if (token == null) {

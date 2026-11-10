@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/calendar_repository.dart';
+import '../data/anniversary_notifications.dart';
 
 String _date(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -13,10 +14,12 @@ class CoupleCalendarScreen extends StatefulWidget {
     required this.token,
     required this.onBack,
     required this.onLogout,
+    this.notifications = const AnniversaryNotifications(),
   });
   final CalendarRepository repository;
   final String token;
   final VoidCallback onBack, onLogout;
+  final AnniversaryNotifications notifications;
   @override
   State<CoupleCalendarScreen> createState() => _CoupleCalendarScreenState();
 }
@@ -29,6 +32,7 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
   bool _busy = false;
   String? _error, _code;
   int _generation = 0;
+  String _notificationStatus = 'disabled';
   DateTime get _month => DateTime(_selected.year, _selected.month);
   @override
   void initState() {
@@ -58,6 +62,8 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
     });
     try {
       final space = await widget.repository.space(widget.token);
+      if (!mounted || generation != _generation) return;
+      final notificationStatus = await widget.notifications.sync(space);
       final events = await widget.repository.events(
         widget.token,
         month,
@@ -67,6 +73,7 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
         setState(() {
           _space = space;
           _events = events;
+          _notificationStatus = notificationStatus;
         });
       }
     } on ApiException catch (e) {
@@ -77,6 +84,9 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
           _space = null;
           _events = [];
         });
+        if (e.isSessionExpired || e.code == 'COUPLE_NOT_FOUND') {
+          await widget.notifications.clear();
+        }
         if (e.isSessionExpired) widget.onLogout();
       }
     } catch (_) {
@@ -86,6 +96,18 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
     } finally {
       if (mounted && generation == _generation) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _toggleReminder(bool enabled) async {
+    final space = _space;
+    if (space == null || _busy) return;
+    setState(() => _busy = true);
+    final status = await widget.notifications.sync(space, enabled: enabled);
+    if (!mounted) return;
+    setState(() {
+      _notificationStatus = status;
+      _busy = false;
+    });
   }
 
   Future<void> _changeAnniversary() async {
@@ -281,6 +303,42 @@ class _CoupleCalendarScreenState extends State<CoupleCalendarScreen>
                               onPressed: _busy ? null : _changeAnniversary,
                               child: const Text('Đổi ngày kỷ niệm'),
                             ),
+                            if (_space?.reminder case final reminder?) ...[
+                              const Divider(),
+                              Text(
+                                reminder.daysUntil == 0
+                                    ? 'Hôm nay kỷ niệm ${reminder.yearsTogether} năm bên nhau!'
+                                    : 'Còn ${reminder.daysUntil} ngày đến kỷ niệm ${reminder.yearsTogether} năm',
+                                key: const Key('anniversaryReminder'),
+                                textAlign: TextAlign.center,
+                              ),
+                              Text('Ngày ${_date(reminder.occursOn)}'),
+                              const Text(
+                                'Ngày 29/2 được nhắc vào 28/2 nếu năm đó không nhuận.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            if (widget.notifications.supported &&
+                                _space?.anniversary != null)
+                              SwitchListTile.adaptive(
+                                key: const Key('anniversaryNotificationSwitch'),
+                                contentPadding: EdgeInsets.zero,
+                                title: const Text('Nhắc kỷ niệm trên iPhone'),
+                                subtitle: Text(
+                                  _notificationStatus == 'denied'
+                                      ? 'Thông báo bị tắt. Cho phép trong Cài đặt iPhone rồi bật lại.'
+                                      : _notificationStatus == 'unavailable'
+                                      ? 'Chưa đặt được lịch nhắc. Vui lòng thử lại.'
+                                      : 'Lúc 9:00 ngày kỷ niệm, theo giờ thiết bị. Bật riêng trên từng máy.',
+                                ),
+                                value: _notificationStatus == 'enabled',
+                                onChanged: _busy ? null : _toggleReminder,
+                              )
+                            else if (_space?.reminder != null)
+                              const Text(
+                                'Nhắc trong ứng dụng. Thông báo khi đóng app cần bản iOS.',
+                                textAlign: TextAlign.center,
+                              ),
                           ],
                         ),
                       ),

@@ -43,4 +43,17 @@ class CalendarTimezoneTests {
             new ObjectMapper(), mock(Validator.class));
         assertThat(service.space(user, "America/New_York").daysTogether()).isEqualTo(1);
     }
+
+    @Test void anniversaryReminderUsesTheRequestedZoneAtMidnight() {
+        var user = UUID.randomUUID();
+        var couple = new CoupleEntity();
+        couple.setAnniversaryDate(LocalDate.of(2020, 11, 1));
+        var access = mock(ActiveCoupleAccess.class);
+        when(access.require(user)).thenReturn(couple);
+        var service = new CalendarService(access, mock(EventRepository.class),
+            Clock.fixed(Instant.parse("2026-11-01T00:30:00Z"), ZoneOffset.UTC),
+            new ObjectMapper(), mock(Validator.class));
+        assertThat(service.space(user, "Asia/Ho_Chi_Minh").reminder().daysUntil()).isZero();
+        assertThat(service.space(user, "America/Los_Angeles").reminder().daysUntil()).isEqualTo(1);
+    }
 }

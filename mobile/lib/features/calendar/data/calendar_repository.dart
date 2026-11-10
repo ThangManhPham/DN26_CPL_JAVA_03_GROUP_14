@@ -15,10 +15,12 @@ class CoupleSpace {
     required this.coupleId,
     this.anniversary,
     this.daysTogether,
+    this.reminder,
   });
   final String coupleId;
   final DateTime? anniversary;
   final int? daysTogether;
+  final AnniversaryReminder? reminder;
 
   factory CoupleSpace.fromJson(Map<String, dynamic> data) => CoupleSpace(
     coupleId: data['coupleId'] as String,
@@ -27,7 +29,28 @@ class CoupleSpace {
         ? null
         : DateTime.parse(data['anniversaryDate'] as String),
     daysTogether: (data['daysTogether'] as num?)?.toInt(),
+    reminder: data['reminder'] == null
+        ? null
+        : AnniversaryReminder.fromJson(
+            data['reminder'] as Map<String, dynamic>,
+          ),
   );
+}
+
+class AnniversaryReminder {
+  const AnniversaryReminder({
+    required this.occursOn,
+    required this.daysUntil,
+    required this.yearsTogether,
+  });
+  final DateTime occursOn;
+  final int daysUntil, yearsTogether;
+  factory AnniversaryReminder.fromJson(Map<String, dynamic> data) =>
+      AnniversaryReminder(
+        occursOn: DateTime.parse(data['occursOn'] as String),
+        daysUntil: (data['daysUntil'] as num).toInt(),
+        yearsTogether: (data['yearsTogether'] as num).toInt(),
+      );
 }
 
 class CoupleEvent {

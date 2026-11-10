@@ -3,22 +3,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/calendar/data/calendar_repository.dart';
+import 'package:mobile/features/calendar/data/anniversary_notifications.dart';
 import 'package:mobile/features/calendar/presentation/couple_calendar_screen.dart';
 import '../support/calendar_fixture.dart';
 
-Widget app(CalendarRepository repository, {VoidCallback? onLogout}) =>
-    MaterialApp(
-      theme: ourSpaceTheme.copyWith(platform: TargetPlatform.iOS),
-      locale: const Locale('vi', 'VN'),
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      supportedLocales: const [Locale('vi', 'VN')],
-      home: CoupleCalendarScreen(
-        repository: repository,
-        token: 'a',
-        onBack: () {},
-        onLogout: onLogout ?? () {},
-      ),
-    );
+Widget app(
+  CalendarRepository repository, {
+  VoidCallback? onLogout,
+  AnniversaryNotifications notifications = const AnniversaryNotifications(),
+}) => MaterialApp(
+  theme: ourSpaceTheme.copyWith(platform: TargetPlatform.iOS),
+  locale: const Locale('vi', 'VN'),
+  localizationsDelegates: GlobalMaterialLocalizations.delegates,
+  supportedLocales: const [Locale('vi', 'VN')],
+  home: CoupleCalendarScreen(
+    repository: repository,
+    token: 'a',
+    onBack: () {},
+    onLogout: onLogout ?? () {},
+    notifications: notifications,
+  ),
+);
 
 Future<void> reveal(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -36,6 +41,50 @@ void main() {
     await tester.pumpWidget(widget);
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'anniversary today is announced and denied permission remains off',
+    (tester) async {
+      final repository = CalendarFixture();
+      repository.currentSpace = CoupleSpace(
+        coupleId: 'ab',
+        anniversary: DateTime(2020, 2, 29),
+        daysTogether: 2000,
+        reminder: AnniversaryReminder(
+          occursOn: DateTime(2027, 2, 28),
+          daysUntil: 0,
+          yearsTogether: 7,
+        ),
+      );
+      final notifications = ReminderFixture();
+      await open(tester, app(repository, notifications: notifications));
+      expect(find.text('Hôm nay kỷ niệm 7 năm bên nhau!'), findsOneWidget);
+      final toggle = find.byKey(const Key('anniversaryNotificationSwitch'));
+      await reveal(tester, toggle);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(notifications.requested, true);
+      expect(tester.widget<SwitchListTile>(toggle).value, false);
+      expect(find.textContaining('Thông báo bị tắt.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'unpaired response cancels device reminder and does not show stale anniversary',
+    (tester) async {
+      final repository = CalendarFixture()
+        ..failure = const ApiException(
+          statusCode: 404,
+          code: 'COUPLE_NOT_FOUND',
+          message: 'No couple',
+        );
+      final notifications = ReminderFixture();
+      await open(tester, app(repository, notifications: notifications));
+      expect(notifications.cleared, true);
+      expect(find.byKey(const Key('anniversaryReminder')), findsNothing);
+    },
+  );
 
   testWidgets(
     'anniversary picker saves the selected civil day and refreshes counter',
@@ -207,4 +256,21 @@ void main() {
       expect(find.text('Đăng nhập lại'), findsOneWidget);
     },
   );
+}
+
+class ReminderFixture extends AnniversaryNotifications {
+  bool? requested;
+  bool cleared = false;
+  @override
+  bool get supported => true;
+  @override
+  Future<String> sync(CoupleSpace space, {bool? enabled}) async {
+    requested = enabled;
+    return enabled == true ? 'denied' : 'disabled';
+  }
+
+  @override
+  Future<void> clear() async {
+    cleared = true;
+  }
 }

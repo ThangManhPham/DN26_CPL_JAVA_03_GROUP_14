@@ -48,6 +48,11 @@ void main() {
       final space = await calendar.space(b);
       expect(space.anniversary, DateTime(2020, 2, 29));
       expect(space.daysTogether, greaterThan(0));
+      expect(space.reminder, isNotNull);
+      expect(space.reminder!.daysUntil, inInclusiveRange(0, 366));
+      final fromA = await calendar.space(a);
+      expect(space.reminder!.occursOn, fromA.reminder!.occursOn);
+      expect((await calendar.space(outsider)).reminder, isNull);
       final start = DateTime.parse('2026-11-02T00:30:00+07:00');
       final data = <String, dynamic>{
         'title': 'Created by A',

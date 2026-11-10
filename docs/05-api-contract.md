@@ -119,6 +119,15 @@ Photo URLs nên là **short-lived signed URLs** hoặc endpoint có auth; không
 
 ## 5.4 Sprint 3 — AI
 
+**M3 — anniversary reminder:** GET/PATCH `/api/v1/couple-space` retains the Sprint 2
+fields and adds `reminder` (null when unset), e.g.
+`{"occursOn":"2027-02-28","daysUntil":110,"yearsTogether":7}`. Dates and day
+counts use the requested `timezone`. The first reminder is after one year;
+February 29 is observed on February 28 in non-leap years. This is read-only
+derived data; client-supplied reminder fields are rejected. Flutter shows it
+in-app; opt-in 09:00 iOS local notifications are device settings, not a server
+push subscription. Details: [M3 integration](18-m3-sprint3-calendar-integration.md).
+
 | Method | Path | Body | Notes |
 |---|---|---|---|
 | POST | `/api/v1/ai/memory-stories` | albumId, selectedPhotoIds, notes, consent=true | draft story; M4 |

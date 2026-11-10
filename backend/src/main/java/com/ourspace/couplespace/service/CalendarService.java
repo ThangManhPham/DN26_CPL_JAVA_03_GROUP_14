@@ -27,14 +27,16 @@ public class CalendarService {
     public CalendarService(ActiveCoupleAccess access, EventRepository events, Clock clock, ObjectMapper json, Validator validator) {
         this.access=access; this.events=events; this.clock=clock; this.json=json; this.validator=validator;
     }
-    public record Space(UUID coupleId, LocalDate anniversaryDate, Long daysTogether, String timezone) {}
+    public record Space(UUID coupleId, LocalDate anniversaryDate, Long daysTogether, String timezone,
+                        AnniversaryReminder reminder) {}
     public record EventPage(List<EventResponse> items, Integer nextPage) {}
     @Transactional(readOnly=true)
     public Space space(UUID user, String timezone) {
         var couple=access.require(user);
         var today=LocalDate.now(clock.withZone(zone(timezone)));
         var date=couple.getAnniversaryDate();
-        return new Space(couple.getId(),date,date==null?null:ChronoUnit.DAYS.between(date,today),timezone);
+        return new Space(couple.getId(),date,date==null?null:ChronoUnit.DAYS.between(date,today),timezone,
+            AnniversaryReminder.next(date, today));
     }
     public Space anniversary(UUID user, LocalDate date, String timezone) {
         var couple=access.require(user);
