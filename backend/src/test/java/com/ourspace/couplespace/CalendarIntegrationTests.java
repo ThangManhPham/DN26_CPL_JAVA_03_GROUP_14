@@ -146,6 +146,8 @@ class CalendarIntegrationTests {
         var today=LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"));
         mvc.perform(get("/api/v1/couple-space").header("Authorization","Bearer "+tb))
             .andExpect(status().isOk()).andExpect(jsonPath("$.anniversaryDate").value(date.toString()))
+            .andExpect(jsonPath("$.reminder.occursOn").isString())
+            .andExpect(jsonPath("$.reminder.daysUntil").isNumber())
             .andExpect(jsonPath("$.daysTogether").value((int)ChronoUnit.DAYS.between(date,today)));
         mvc.perform(patch("/api/v1/couple-space").header("Authorization","Bearer "+ta).contentType(MediaType.APPLICATION_JSON)
             .content("{\"anniversaryDate\":\"2999-01-01\"}")).andExpect(status().isUnprocessableEntity());

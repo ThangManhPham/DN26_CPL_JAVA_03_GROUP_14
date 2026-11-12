@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../data/photo_repository.dart';
+import '../../features/calendar/data/calendar_repository.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/pairing/data/pairing_repository.dart';
 import '../../features/pairing/presentation/pairing_gate.dart';
@@ -26,12 +27,14 @@ class AppRouter extends StatelessWidget {
     required this.couples,
     required this.photos,
     required this.timeline,
+    this.calendar,
   });
 
   final AuthController auth;
   final CoupleRepository couples;
   final PhotoRepository photos;
   final TimelineRepository timeline;
+  final CalendarRepository? calendar;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -54,6 +57,7 @@ class AppRouter extends StatelessWidget {
         couples: couples,
         photos: photos,
         timeline: timeline,
+        calendar: calendar,
       );
     },
   );
