@@ -6,6 +6,8 @@ Theo dòng M3 trong [review 05/11/2026](17-sprint2-review-sprint3-carryover.md):
 đưa ngày kỷ niệm, bộ đếm và CRUD sự kiện vào ứng dụng Flutter/iOS hiện tại,
 dùng backend đã merge ở PR #10. Nhánh triển khai:
 `feature/S3-M3-calendar-integration`, nền `main` tại `af1b7df`.
+Trước khi tạo PR ngày 12/11/2026, đã ghép `origin/main` tại `561d89a`
+(PR #12 của M1), giữ sửa lỗi upload/401 và tích hợp lịch của M3.
 
 Đây là giao diện ứng dụng của nhóm, riêng với web demo cá nhân ngoài repository.
 Không đưa web demo, tài khoản cá nhân hay video vào thay đổi này. Phần carry-over

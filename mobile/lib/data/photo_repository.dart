@@ -46,11 +46,12 @@ abstract class PhotoRepository {
 }
 
 class HttpPhotoRepository implements PhotoRepository {
-  HttpPhotoRepository({required String baseUrl, http.Client? client})
+  HttpPhotoRepository({required String baseUrl, http.Client? client, this.onUnauthenticated})
     : _base = Uri.parse(baseUrl),
       _client = client ?? http.Client();
   final Uri _base;
   final http.Client _client;
+  final void Function()? onUnauthenticated;
 
   @override
   Future<SharedPhoto?> latest(String token) async {
@@ -110,6 +111,7 @@ class HttpPhotoRepository implements PhotoRepository {
   void _check(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) return;
     if (response.statusCode == 401) {
+      onUnauthenticated?.call();
       throw const PhotoException(
         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
       );
