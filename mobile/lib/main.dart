@@ -58,7 +58,7 @@ Future<void> main() async {
           : ApiTimelineRepository(client),
       photos: AppConfig.useMock
           ? MockPhotoRepository(currentUser: () => auth.user)
-          : HttpPhotoRepository(baseUrl: AppConfig.baseUrl),
+          : HttpPhotoRepository(baseUrl: AppConfig.baseUrl, onUnauthenticated: auth.forceLogout),
       push: push,
       messengerKey: messengerKey,
     ),
