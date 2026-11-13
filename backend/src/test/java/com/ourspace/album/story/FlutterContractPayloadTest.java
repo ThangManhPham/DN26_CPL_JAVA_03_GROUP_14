@@ -122,3 +122,4 @@ class FlutterContractPayloadTest {
                 .andExpect(jsonPath("$.tone").value("ROMANTIC"));
     }
 }
+
