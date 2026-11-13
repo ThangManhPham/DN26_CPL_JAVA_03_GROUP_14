@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/album_repository.dart';
 import '../../data/photo_repository.dart';
 import '../../features/calendar/data/calendar_repository.dart';
 import '../../features/auth/presentation/auth_screen.dart';
@@ -26,6 +27,7 @@ class AppRouter extends StatelessWidget {
     required this.auth,
     required this.couples,
     required this.photos,
+    this.albums,
     required this.timeline,
     this.calendar,
   });
@@ -33,6 +35,7 @@ class AppRouter extends StatelessWidget {
   final AuthController auth;
   final CoupleRepository couples;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
   final TimelineRepository timeline;
   final CalendarRepository? calendar;
 
@@ -56,6 +59,7 @@ class AppRouter extends StatelessWidget {
         auth: auth,
         couples: couples,
         photos: photos,
+        albums: albums,
         timeline: timeline,
         calendar: calendar,
       );

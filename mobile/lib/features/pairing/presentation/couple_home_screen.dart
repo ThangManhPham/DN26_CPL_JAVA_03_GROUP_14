@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../album_list_screen.dart';
 import '../../../core/state/auth_controller.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/album_repository.dart';
 import '../../../data/photo_repository.dart';
 import '../../../photo_screen.dart';
 import '../../auth/presentation/profile_screen.dart';
@@ -21,6 +23,7 @@ class CoupleHomeScreen extends StatefulWidget {
     required this.controller,
     required this.userId,
     required this.photos,
+    this.albums,
     required this.timeline,
     this.calendar,
   });
@@ -29,6 +32,7 @@ class CoupleHomeScreen extends StatefulWidget {
   final PairingController controller;
   final String userId;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
   final TimelineRepository timeline;
   final CalendarRepository? calendar;
 
@@ -111,9 +115,11 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -213,6 +219,30 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
                   ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
+                  key: const Key('openAlbums'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: widget.albums == null
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => AlbumListScreen(
+                              albumRepository: widget.albums!,
+                              photoRepository: widget.photos,
+                              token: widget.auth.token ?? '',
+                              userId: widget.userId,
+                            ),
+                          ),
+                        ),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Album kỷ niệm của hai bạn'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
                   key: const Key('openPhotos'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
@@ -262,7 +292,8 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   static String _statusLabel(String status) =>

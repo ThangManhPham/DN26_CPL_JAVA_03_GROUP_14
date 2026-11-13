@@ -11,6 +11,7 @@ import 'core/router/app_router.dart';
 import 'core/state/auth_controller.dart';
 import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
+import 'data/album_repository.dart';
 import 'data/photo_repository.dart';
 import 'features/auth/data/auth_repository.dart';
 import 'features/calendar/data/calendar_repository.dart';
@@ -66,6 +67,12 @@ Future<void> main() async {
               baseUrl: AppConfig.baseUrl,
               onUnauthenticated: auth.forceLogout,
             ),
+      albums: AppConfig.useMock
+          ? MockAlbumRepository()
+          : HttpAlbumRepository(
+              baseUrl: AppConfig.baseUrl,
+              onUnauthenticated: auth.forceLogout,
+            ),
       calendar: AppConfig.useMock ? null : ApiCalendarRepository(client),
       push: push,
       messengerKey: messengerKey,
@@ -102,6 +109,7 @@ class OurSpaceApp extends StatefulWidget {
     required this.couples,
     required this.timeline,
     required this.photos,
+    this.albums,
     this.calendar,
     this.push,
     this.messengerKey,
@@ -111,6 +119,7 @@ class OurSpaceApp extends StatefulWidget {
   final CoupleRepository couples;
   final TimelineRepository timeline;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
   final CalendarRepository? calendar;
   final AppPushBridge? push;
   final GlobalKey<ScaffoldMessengerState>? messengerKey;
@@ -181,6 +190,7 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
       auth: widget.auth,
       couples: widget.couples,
       photos: widget.photos,
+      albums: widget.albums,
       timeline: widget.timeline,
       calendar: widget.calendar,
     ),
