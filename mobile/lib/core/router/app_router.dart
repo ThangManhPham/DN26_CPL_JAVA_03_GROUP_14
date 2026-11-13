@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../data/album_repository.dart';
+import '../../data/memory_story_repository.dart';
 import '../../data/photo_repository.dart';
+import '../../features/calendar/data/calendar_repository.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/pairing/data/pairing_repository.dart';
 import '../../features/pairing/presentation/pairing_gate.dart';
@@ -25,13 +28,19 @@ class AppRouter extends StatelessWidget {
     required this.auth,
     required this.couples,
     required this.photos,
+    this.albums,
+    this.stories,
     required this.timeline,
+    this.calendar,
   });
 
   final AuthController auth;
   final CoupleRepository couples;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
+  final MemoryStoryRepository? stories;
   final TimelineRepository timeline;
+  final CalendarRepository? calendar;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -53,7 +62,10 @@ class AppRouter extends StatelessWidget {
         auth: auth,
         couples: couples,
         photos: photos,
+        albums: albums,
+        stories: stories,
         timeline: timeline,
+        calendar: calendar,
       );
     },
   );

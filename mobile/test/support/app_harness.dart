@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/core/network/api_client.dart';
 import 'package:mobile/core/state/auth_controller.dart';
 import 'package:mobile/core/storage/token_storage.dart';
+import 'package:mobile/data/album_repository.dart';
 import 'package:mobile/data/photo_repository.dart';
 import 'package:mobile/features/auth/data/auth_repository.dart';
 import 'package:mobile/features/pairing/data/pairing_repository.dart';
@@ -17,6 +18,7 @@ class AppHarness {
     required this.couples,
     required this.timeline,
     required this.photos,
+    required this.albums,
   });
 
   factory AppHarness({
@@ -63,6 +65,7 @@ class AppHarness {
         currentUserId: () => auth.user?.id ?? 'mock-me',
       ),
       photos: MockPhotoRepository(),
+      albums: MockAlbumRepository(),
     );
   }
 
@@ -72,11 +75,13 @@ class AppHarness {
   final MockCoupleRepository couples;
   final MockTimelineRepository timeline;
   final MockPhotoRepository photos;
+  final MockAlbumRepository albums;
 
   Widget get app => OurSpaceApp(
     auth: auth,
     couples: couples,
     timeline: timeline,
     photos: photos,
+    albums: albums,
   );
 }

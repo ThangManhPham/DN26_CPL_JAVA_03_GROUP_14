@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/state/auth_controller.dart';
 import '../../../core/widgets/async_states.dart';
+import '../../../data/album_repository.dart';
+import '../../../data/memory_story_repository.dart';
 import '../../../data/photo_repository.dart';
+import '../../calendar/data/calendar_repository.dart';
 import '../../timeline/data/timeline_repository.dart';
 import '../data/pairing_repository.dart';
 import 'couple_home_screen.dart';
@@ -18,14 +21,20 @@ class PairingGate extends StatefulWidget {
     required this.auth,
     required this.couples,
     required this.photos,
+    this.albums,
+    this.stories,
     required this.timeline,
+    this.calendar,
   });
 
   final String userId;
   final AuthController auth;
   final CoupleRepository couples;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
+  final MemoryStoryRepository? stories;
   final TimelineRepository timeline;
+  final CalendarRepository? calendar;
 
   @override
   State<PairingGate> createState() => _PairingGateState();
@@ -72,7 +81,10 @@ class _PairingGateState extends State<PairingGate> {
         controller: _controller,
         userId: widget.userId,
         photos: widget.photos,
+        albums: widget.albums,
+        stories: widget.stories,
         timeline: widget.timeline,
+        calendar: widget.calendar,
       );
     },
   );

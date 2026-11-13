@@ -5,6 +5,8 @@ import 'package:http/testing.dart';
 import 'package:mobile/data/memory_story_repository.dart';
 
 void main() {
+  const jsonHeaders = {'content-type': 'application/json; charset=utf-8'};
+
   group('HttpMemoryStoryRepository', () {
     test('generateStory sends JSON body and parses MemoryStoryDetail draft', () async {
       final client = MockClient((request) async {
@@ -35,6 +37,7 @@ void main() {
             'updatedAt': '2026-11-08T10:00:00Z',
           }),
           201,
+          headers: jsonHeaders,
         );
       });
 
@@ -79,6 +82,7 @@ void main() {
             'savedAt': '2026-11-08T10:05:00Z',
           }),
           200,
+          headers: jsonHeaders,
         );
       });
 
@@ -114,6 +118,7 @@ void main() {
             'updatedAt': '2026-11-08T10:10:00Z',
           }),
           200,
+          headers: jsonHeaders,
         );
       });
 
@@ -150,6 +155,7 @@ void main() {
             'updatedAt': '2026-11-08T10:15:00Z',
           }),
           200,
+          headers: jsonHeaders,
         );
       });
 
@@ -180,6 +186,7 @@ void main() {
             }
           ]),
           200,
+          headers: jsonHeaders,
         );
       });
 
@@ -198,6 +205,7 @@ void main() {
             'message': 'Cần sự đồng thuận của người dùng',
           }),
           400,
+          headers: jsonHeaders,
         );
       });
 
@@ -217,6 +225,7 @@ void main() {
             'message': 'Bản nháp chỉ người tạo mới có quyền truy cập',
           }),
           403,
+          headers: jsonHeaders,
         );
       });
 
@@ -236,6 +245,7 @@ void main() {
             'message': 'Quá số lần yêu cầu',
           }),
           429,
+          headers: jsonHeaders,
         );
       });
 
@@ -258,41 +268,48 @@ void main() {
         throwsA(isA<MemoryStoryException>()),
       );
 
-      // Generate with consent
+      // Successful generation
       final draft = await mock.generateStory(
         'token',
         albumId: 'album-1',
         photoIds: ['p1', 'p2'],
-        notes: 'Ghi chú',
+        notes: 'Chuyến đi',
         tone: 'ROMANTIC',
         consent: true,
       );
       expect(draft.isDraft, isTrue);
       expect(draft.photoIds.length, 2);
 
-      // Update draft
+      // Get story
+      final fetched = await mock.getStory('token', draft.id);
+      expect(fetched.id, draft.id);
+
+      // Update story
       final updated = await mock.updateStory(
         'token',
         draft.id,
-        title: 'Tiêu đề sửa',
-        storyText: 'Nội dung sửa',
+        title: 'Chỉnh sửa tiêu đề',
+        storyText: 'Chỉnh sửa nội dung',
+        highlights: ['Điểm mới'],
       );
-      expect(updated.title, 'Tiêu đề sửa');
+      expect(updated.title, 'Chỉnh sửa tiêu đề');
+      expect(updated.highlights, ['Điểm mới']);
 
       // Save story
       final saved = await mock.saveStory('token', draft.id);
       expect(saved.isSaved, isTrue);
+      expect(saved.savedAt, isNotNull);
 
-      // Cannot edit saved story
+      // Update saved story throws conflict
       expect(
-        () => mock.updateStory('token', draft.id, title: 'Sửa tiếp', storyText: 'Lỗi'),
-        throwsA(isA<MemoryStoryException>().having((e) => e.code, 'code', 'CANNOT_EDIT_SAVED_STORY')),
+        () => mock.updateStory('token', draft.id, title: 'Thử lại', storyText: 'Không được'),
+        throwsA(isA<MemoryStoryException>().having((e) => e.code, 'code', 'STORY_ALREADY_SAVED')),
       );
 
       // List stories in album
       final list = await mock.listStoriesInAlbum('token', 'album-1');
       expect(list.length, 1);
-      expect(list.first.title, 'Tiêu đề sửa');
+      expect(list.first.id, draft.id);
     });
   });
 }

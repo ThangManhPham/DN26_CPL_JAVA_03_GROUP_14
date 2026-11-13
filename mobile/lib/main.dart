@@ -11,8 +11,12 @@ import 'core/router/app_router.dart';
 import 'core/state/auth_controller.dart';
 import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
+import 'data/album_repository.dart';
+import 'data/memory_story_repository.dart';
 import 'data/photo_repository.dart';
 import 'features/auth/data/auth_repository.dart';
+import 'features/calendar/data/calendar_repository.dart';
+import 'features/calendar/data/anniversary_notifications.dart';
 import 'features/pairing/data/pairing_repository.dart';
 import 'features/timeline/data/timeline_repository.dart';
 import 'firebase_options.dart';
@@ -54,11 +58,29 @@ Future<void> main() async {
           ? MockCoupleRepository(currentUser: () => auth.user)
           : ApiCoupleRepository(client),
       timeline: AppConfig.useMock
-          ? MockTimelineRepository(currentUserId: () => auth.user?.id ?? 'mock-me')
+          ? MockTimelineRepository(
+              currentUserId: () => auth.user?.id ?? 'mock-me',
+            )
           : ApiTimelineRepository(client),
       photos: AppConfig.useMock
           ? MockPhotoRepository(currentUser: () => auth.user)
-          : HttpPhotoRepository(baseUrl: AppConfig.baseUrl),
+          : HttpPhotoRepository(
+              baseUrl: AppConfig.baseUrl,
+              onUnauthenticated: auth.forceLogout,
+            ),
+      albums: AppConfig.useMock
+          ? MockAlbumRepository()
+          : HttpAlbumRepository(
+              baseUrl: AppConfig.baseUrl,
+              onUnauthenticated: auth.forceLogout,
+            ),
+      stories: AppConfig.useMock
+          ? MockMemoryStoryRepository()
+          : HttpMemoryStoryRepository(
+              baseUrl: AppConfig.baseUrl,
+              onUnauthenticated: auth.forceLogout,
+            ),
+      calendar: AppConfig.useMock ? null : ApiCalendarRepository(client),
       push: push,
       messengerKey: messengerKey,
     ),
@@ -94,6 +116,9 @@ class OurSpaceApp extends StatefulWidget {
     required this.couples,
     required this.timeline,
     required this.photos,
+    this.albums,
+    this.stories,
+    this.calendar,
     this.push,
     this.messengerKey,
   });
@@ -102,6 +127,9 @@ class OurSpaceApp extends StatefulWidget {
   final CoupleRepository couples;
   final TimelineRepository timeline;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
+  final MemoryStoryRepository? stories;
+  final CalendarRepository? calendar;
   final AppPushBridge? push;
   final GlobalKey<ScaffoldMessengerState>? messengerKey;
 
@@ -111,12 +139,18 @@ class OurSpaceApp extends StatefulWidget {
 
 class _OurSpaceAppState extends State<OurSpaceApp> {
   String? _registeredPushToken;
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   @override
   void initState() {
     super.initState();
     widget.auth.addListener(_syncPushRegistration);
-    widget.auth.restore().whenComplete(_syncPushRegistration);
+    widget.auth.restore().whenComplete(() {
+      _syncPushRegistration();
+      if (!widget.auth.isAuthenticated) {
+        const AnniversaryNotifications().clear();
+      }
+    });
   }
 
   @override
@@ -133,14 +167,23 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
     final previous = _registeredPushToken;
     _registeredPushToken = token;
     if (previous != null) {
+      const AnniversaryNotifications().clear();
       widget.push?.deactivate(previous);
       IosWidgetBridge.clear();
+      if (token == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !widget.auth.isAuthenticated) {
+            _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+          }
+        });
+      }
     }
     if (token != null) widget.push?.activate(token);
   }
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    navigatorKey: _navigatorKey,
     scaffoldMessengerKey: widget.messengerKey,
     title: 'OurSpace',
     debugShowCheckedModeBanner: false,
@@ -156,7 +199,10 @@ class _OurSpaceAppState extends State<OurSpaceApp> {
       auth: widget.auth,
       couples: widget.couples,
       photos: widget.photos,
+      albums: widget.albums,
+      stories: widget.stories,
       timeline: widget.timeline,
+      calendar: widget.calendar,
     ),
   );
 }

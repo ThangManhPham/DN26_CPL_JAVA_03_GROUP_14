@@ -26,6 +26,7 @@ void main() {
             }
           ]),
           200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
 
@@ -60,6 +61,7 @@ void main() {
             'updatedAt': '2026-10-31T10:00:00Z',
           }),
           201,
+          headers: {'content-type': 'application/json; charset=utf-8'},
         );
       });
 
@@ -99,11 +101,16 @@ void main() {
       expect(updated.coverPhotoId, 'photo-99');
     });
 
-    test('403 forbidden throws readable AlbumException', () async {
+    test('403 forbidden throws readable AlbumException and does not trigger onUnauthenticated', () async {
+      var loggedOut = false;
       final client = MockClient((_) async => http.Response('', 403));
-      final repo = HttpAlbumRepository(baseUrl: 'http://localhost:8080', client: client);
+      final repo = HttpAlbumRepository(
+        baseUrl: 'http://localhost:8080',
+        client: client,
+        onUnauthenticated: () => loggedOut = true,
+      );
 
-      expect(
+      await expectLater(
         () => repo.listAlbums('test-token'),
         throwsA(isA<AlbumException>().having(
           (e) => e.message,
@@ -111,6 +118,47 @@ void main() {
           contains('ghép đôi'),
         )),
       );
+      expect(loggedOut, isFalse);
+    });
+
+    test('404 not found throws readable AlbumException and does not trigger onUnauthenticated', () async {
+      var loggedOut = false;
+      final client = MockClient((_) async => http.Response('', 404));
+      final repo = HttpAlbumRepository(
+        baseUrl: 'http://localhost:8080',
+        client: client,
+        onUnauthenticated: () => loggedOut = true,
+      );
+
+      await expectLater(
+        () => repo.getAlbumDetail('test-token', 'non-existent-id'),
+        throwsA(isA<AlbumException>().having(
+          (e) => e.message,
+          'message',
+          contains('không tồn tại'),
+        )),
+      );
+      expect(loggedOut, isFalse);
+    });
+
+    test('401 unauthorized invokes onUnauthenticated callback and throws AlbumException', () async {
+      var loggedOut = false;
+      final client = MockClient((_) async => http.Response('', 401));
+      final repo = HttpAlbumRepository(
+        baseUrl: 'http://localhost:8080',
+        client: client,
+        onUnauthenticated: () => loggedOut = true,
+      );
+
+      await expectLater(
+        () => repo.listAlbums('expired-token'),
+        throwsA(isA<AlbumException>().having(
+          (e) => e.message,
+          'message',
+          contains('hết hạn'),
+        )),
+      );
+      expect(loggedOut, isTrue);
     });
   });
 

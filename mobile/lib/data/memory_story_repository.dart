@@ -100,12 +100,16 @@ abstract class MemoryStoryRepository {
 }
 
 class HttpMemoryStoryRepository implements MemoryStoryRepository {
-  HttpMemoryStoryRepository({required String baseUrl, http.Client? client})
-      : _base = Uri.parse(baseUrl),
+  HttpMemoryStoryRepository({
+    required String baseUrl,
+    http.Client? client,
+    this.onUnauthenticated,
+  })  : _base = Uri.parse(baseUrl),
         _client = client ?? http.Client();
 
   final Uri _base;
   final http.Client _client;
+  final void Function()? onUnauthenticated;
 
   @override
   Future<MemoryStoryDetail> generateStory(
@@ -157,8 +161,8 @@ class HttpMemoryStoryRepository implements MemoryStoryRepository {
     final body = jsonEncode({
       'title': title,
       'story': storyText,
-      if (highlights != null) 'highlights': highlights,
-      if (tone != null) 'tone': tone,
+      'highlights': ?highlights,
+      'tone': ?tone,
     });
 
     final response = await _client.put(
@@ -211,6 +215,7 @@ class HttpMemoryStoryRepository implements MemoryStoryRepository {
     } catch (_) {}
 
     if (response.statusCode == 401) {
+      onUnauthenticated?.call();
       throw MemoryStoryException('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', code: code ?? 'UNAUTHORIZED');
     }
 
@@ -319,7 +324,7 @@ class MockMemoryStoryRepository implements MemoryStoryRepository {
       for (int i = 0; i < list.length; i++) {
         if (list[i].id == storyId) {
           if (list[i].status == 'SAVED') {
-            throw const MemoryStoryException('Không thể sửa câu chuyện đã lưu', code: 'CANNOT_EDIT_SAVED_STORY');
+            throw const MemoryStoryException('Không thể sửa câu chuyện đã lưu', code: 'STORY_ALREADY_SAVED');
           }
           final updated = MemoryStoryDetail(
             id: list[i].id,

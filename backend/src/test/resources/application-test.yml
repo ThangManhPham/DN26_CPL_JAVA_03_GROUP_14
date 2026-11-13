@@ -5,7 +5,7 @@ spring:
     password: ${TEST_DATABASE_PASSWORD:}
   flyway:
     enabled: true
-    locations: classpath:db/h2-migration
+    locations: ${TEST_FLYWAY_LOCATIONS:classpath:db/h2-migration}
   jpa:
     hibernate:
       ddl-auto: validate

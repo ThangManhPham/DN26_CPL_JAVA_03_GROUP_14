@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../album_list_screen.dart';
 import '../../../core/config/app_config.dart';
-import '../../../core/network/api_exception.dart';
 import '../../../core/state/auth_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/album_repository.dart';
@@ -10,6 +9,8 @@ import '../../../data/memory_story_repository.dart';
 import '../../../data/photo_repository.dart';
 import '../../../photo_screen.dart';
 import '../../auth/presentation/profile_screen.dart';
+import '../../calendar/data/calendar_repository.dart';
+import '../../calendar/presentation/couple_calendar_screen.dart';
 import '../../timeline/data/timeline_repository.dart';
 import '../../timeline/presentation/timeline_screen.dart';
 import '../data/pairing_models.dart';
@@ -24,14 +25,20 @@ class CoupleHomeScreen extends StatefulWidget {
     required this.controller,
     required this.userId,
     required this.photos,
+    this.albums,
+    this.stories,
     required this.timeline,
+    this.calendar,
   });
 
   final AuthController auth;
   final PairingController controller;
   final String userId;
   final PhotoRepository photos;
+  final AlbumRepository? albums;
+  final MemoryStoryRepository? stories;
   final TimelineRepository timeline;
+  final CalendarRepository? calendar;
 
   @override
   State<CoupleHomeScreen> createState() => _CoupleHomeScreenState();
@@ -77,7 +84,9 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
       if (mounted) setState(() => _actionError = error.userMessage);
     } catch (_) {
       if (mounted) {
-        setState(() => _actionError = 'Không thể hủy ghép đôi. Vui lòng thử lại.');
+        setState(
+          () => _actionError = 'Không thể hủy ghép đôi. Vui lòng thử lại.',
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -110,9 +119,11 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
-            child: ListView(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              children: [
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -159,8 +170,7 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
                       child: Text(
                         member.displayName.isEmpty
                             ? '?'
-                            : member.displayName.characters.first
-                                  .toUpperCase(),
+                            : member.displayName.characters.first.toUpperCase(),
                       ),
                     ),
                     title: Text(
@@ -186,6 +196,65 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
+                  key: const Key('openCalendar'),
+                  onPressed: widget.calendar == null
+                      ? null
+                      : () async {
+                          await Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (_) => CoupleCalendarScreen(
+                                repository: widget.calendar!,
+                                token: widget.auth.token ?? '',
+                                onBack: () => Navigator.of(context).pop(),
+                                onLogout: widget.auth.forceLogout,
+                              ),
+                            ),
+                          );
+                          if (mounted && widget.auth.isAuthenticated) {
+                            await widget.controller.load();
+                          }
+                        },
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  label: const Text('Ngày kỷ niệm & lịch chung'),
+                ),
+                if (widget.calendar == null)
+                  const Text(
+                    'Lịch chung chưa khả dụng trong chế độ dữ liệu mẫu.',
+                  ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const Key('openAlbums'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: widget.albums == null
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => AlbumListScreen(
+                              albumRepository: widget.albums!,
+                              photoRepository: widget.photos,
+                              storyRepository: widget.stories ??
+                                  (AppConfig.useMock
+                                      ? MockMemoryStoryRepository()
+                                      : HttpMemoryStoryRepository(
+                                          baseUrl: AppConfig.baseUrl,
+                                          onUnauthenticated:
+                                              widget.auth.forceLogout,
+                                        )),
+                              token: widget.auth.token ?? '',
+                              userId: widget.userId,
+                            ),
+                          ),
+                        ),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Album & Kỷ niệm của hai bạn'),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
                   key: const Key('openPhotos'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(54),
@@ -204,33 +273,6 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
                   ),
                   icon: const Icon(Icons.add_a_photo_outlined),
                   label: const Text('Gửi ảnh cho người ấy'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  key: const Key('openAlbums'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => AlbumListScreen(
-                        albumRepository: AppConfig.useMock
-                            ? MockAlbumRepository()
-                            : HttpAlbumRepository(baseUrl: AppConfig.baseUrl),
-                        photoRepository: widget.photos,
-                        storyRepository: AppConfig.useMock
-                            ? MockMemoryStoryRepository()
-                            : HttpMemoryStoryRepository(baseUrl: AppConfig.baseUrl),
-                        token: widget.auth.token ?? '',
-                        userId: widget.userId,
-                      ),
-                    ),
-                  ),
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Album & Kỷ niệm của hai bạn'),
                 ),
                 if (_actionError != null) ...[
                   const SizedBox(height: 18),
@@ -262,7 +304,8 @@ class _CoupleHomeScreenState extends State<CoupleHomeScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   static String _statusLabel(String status) =>

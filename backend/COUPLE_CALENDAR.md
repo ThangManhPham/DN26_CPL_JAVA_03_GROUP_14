@@ -32,7 +32,13 @@ resolved on the server; clients cannot select another couple or creator.
 - Both active members may read/update/delete. Unpaired users and ended/former
   memberships are denied. Cross-couple events return 404 without metadata.
   Missing/invalid token returns 401; malformed/missing query parameters return 400.
-- Push notifications, reminders and recurring events are outside this delivery.
+- Sprint 3 adds a read-only `reminder` object to GET/PATCH couple-space:
+  `{occursOn: YYYY-MM-DD, daysUntil: number, yearsTogether: number}`, or null
+  when the anniversary is unset. It is calculated using the requested timezone.
+  The first anniversary is after one year; February 29 is observed on February 28
+  in non-leap years. Existing fields and API paths remain compatible.
+- The Flutter calendar shows the reminder, with opt-in local notifications on iOS.
+  Remote event push and recurring events remain outside this delivery.
 
 ## Migration coordination
 

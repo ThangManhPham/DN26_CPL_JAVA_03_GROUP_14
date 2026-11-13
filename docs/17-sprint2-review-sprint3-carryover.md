@@ -1,0 +1,15 @@
+# Sprint 2 review and Sprint 3 carry-over (05/11/2026)
+
+This review compares `origin/main` after PR #6, #9, #10 and #11 with the Sprint 2 scope in [06-sprints-ownership.md](06-sprints-ownership.md). A branch or mock implementation alone is not an integrated demo. Recheck status after subsequent merges.
+
+| Priority | Owner | Sprint 2 finding | Sprint 3 task / acceptance evidence |
+|---|---|---|---|
+| P0 | M2 + backend owner | Flutter timeline, photo detail and reaction client are on `main`, but backend has no paginated photo detail/feed or reaction endpoints. M2 tests use mock repositories/server. | Implement `GET /photos` with stable cursor, `GET /photos/{id}`, reaction PUT/DELETE and DB constraint for one reaction per user/photo. Enforce couple authorization; pass TC-17/18 with PostgreSQL and two real accounts. |
+| P0 | M3 | Calendar/anniversary backend and tests are merged (PR #10); no Flutter calendar, event editor or love-counter screen is on `main`. M3's own handoff calls this backend-only. | Add iOS shared calendar UI, anniversary counter, event create/edit/delete and loading/error states; demonstrate A/B sharing real backend data and TC-21 timezone behavior. |
+| P0 | M4 | Album implementation exists on `origin/feature/S2-M4-memory-albums`, but is absent from `main`. Its V5 migration must precede the merged calendar V6 on any database already migrated to V6. | Review/integrate album branch with current Flutter navigation and backend. Resolve Flyway version ordering for existing databases before deployment; verify create/list/detail, add/remove same-couple photos, outsider denial (TC-19), and PostgreSQL migration. |
+| P0 | M5 | No date planner model, API, Flutter flow or tests were found on `main`; the Docker branch merged as PR #6 is infrastructure work, not the assigned manual planner feature. | Deliver manual date-plan CRUD end-to-end, budget/interests input, couple authorization, migration, tests and A/B demo before AI recommendation work. |
+| P1 | M5 + team | Compose/CI changes are present, but this review has no fresh clean-machine PostgreSQL, two-device E2E or staging evidence. | Run PR CI and Docker/PostgreSQL smoke tests including migrations V1–V6, auth/pairing/photo/calendar/album/planner; attach logs/screenshots and failures. |
+| P1 | M2 + M1 | Pairing/auth UI and secure token storage are merged, but real two-device API and restart/401 behavior still need acceptance evidence. | Demonstrate two accounts on separate sessions with real backend, restart persistence, expired/used invite and 401 logout; attach TC-01–11 evidence. |
+| P1 | M4 + team | `DELETE /couples/me` policy/TC-12 remains unresolved in the Sprint plan. | Decide retention/unpair policy in docs, then implement or formally remove the endpoint/UI from scope; test data behavior. |
+
+M1 photo upload, private access and iOS widget handoff are already on `main`; physical iPhone/App Group verification remains in M1's existing Sprint 3 scope. Optional APNs/background push is outside the current coursework scope.

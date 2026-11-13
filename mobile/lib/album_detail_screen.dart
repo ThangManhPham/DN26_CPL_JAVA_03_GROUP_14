@@ -37,7 +37,6 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
 
   late final MemoryStoryRepository _storyRepo;
   List<MemoryStoryDetail> _stories = [];
-  bool _loadingStories = false;
 
   @override
   void initState() {
@@ -51,18 +50,14 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   }
 
   Future<void> _loadStories() async {
-    setState(() => _loadingStories = true);
     try {
       final stories = await _storyRepo.listStoriesInAlbum(widget.token, widget.albumId);
       if (mounted) {
         setState(() {
           _stories = stories;
-          _loadingStories = false;
         });
       }
-    } catch (_) {
-      if (mounted) setState(() => _loadingStories = false);
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadDetail() async {
@@ -337,7 +332,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: availablePhotos.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      separatorBuilder: (_, _) => const SizedBox(width: 8),
                       itemBuilder: (_, index) {
                         final photo = availablePhotos[index];
                         final isSelected = selectedPhotoIds.contains(photo.id);
@@ -431,7 +426,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                   // 4. Đồng thuận người dùng (Mandatory Consent)
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.pink.shade50.withOpacity(0.5),
+                      color: Colors.pink.shade50.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.pink.shade100),
                     ),
@@ -708,7 +703,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _stories.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        separatorBuilder: (_, _) => const SizedBox(width: 12),
                         itemBuilder: (_, index) => _buildStoryCard(_stories[index]),
                       ),
                     ),
@@ -719,7 +714,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [AppColors.softRose, Colors.pink.shade50.withOpacity(0.5)],
+                          colors: [AppColors.softRose, Colors.pink.shade50.withValues(alpha: 0.5)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -749,6 +744,10 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                           const SizedBox(width: 8),
                           FilledButton.tonal(
                             key: const Key('createFirstStoryButton'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(80, 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                            ),
                             onPressed: _showGenerateStorySheet,
                             child: const Text('Tạo ngay'),
                           ),
@@ -875,7 +874,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
