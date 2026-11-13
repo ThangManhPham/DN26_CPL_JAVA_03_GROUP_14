@@ -39,6 +39,13 @@ dependencies:
   http_parser: ^4.1.2
   firebase_core: ^5.1.0
   firebase_messaging: ^17.0.1
+  # M2 (S1-07): HTTP client có interceptor + token storage an toàn đa nền tảng.
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+  # M2 (S1-08): share sheet của iOS / Web Share API cho mã mời.
+  share_plus: ^11.0.0
+  # M2: truy cập Web API (localStorage) theo API mới thay cho `dart:html` deprecated.
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +57,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+  # Dev mock server dùng chung cho 2 thiết bị/2 cửa sổ (mobile/tool/mock_server).
+  # Chỉ dùng khi dev, không nằm trong bản build của app.
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_cors_headers: ^0.1.5
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

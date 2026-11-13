@@ -5,6 +5,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+import '../features/auth/data/auth_models.dart';
+import '../features/timeline/data/timeline_models.dart';
+import '../features/timeline/data/timeline_repository.dart';
+
 class SharedPhoto {
   const SharedPhoto({
     required this.id,
@@ -42,11 +46,12 @@ abstract class PhotoRepository {
 }
 
 class HttpPhotoRepository implements PhotoRepository {
-  HttpPhotoRepository({required String baseUrl, http.Client? client})
+  HttpPhotoRepository({required String baseUrl, http.Client? client, this.onUnauthenticated})
     : _base = Uri.parse(baseUrl),
       _client = client ?? http.Client();
   final Uri _base;
   final http.Client _client;
+  final void Function()? onUnauthenticated;
 
   @override
   Future<SharedPhoto?> latest(String token) async {
@@ -106,6 +111,7 @@ class HttpPhotoRepository implements PhotoRepository {
   void _check(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) return;
     if (response.statusCode == 401) {
+      onUnauthenticated?.call();
       throw const PhotoException(
         'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
       );
@@ -136,13 +142,24 @@ String newPhotoRequestId() {
 }
 
 class MockPhotoRepository implements PhotoRepository {
-  SharedPhoto? _photo;
-  Uint8List? _bytes;
+  MockPhotoRepository({UserProfile? Function()? currentUser})
+      : _currentUser = currentUser ?? (() => null);
+
+  final UserProfile? Function() _currentUser;
+
+  static SharedPhoto? _latestPhoto;
+
+  /// Bytes của từng ảnh, khoá theo `imagePath` — không dùng chung một biến để
+  /// mọi ảnh đều hiển thị đúng nội dung đã gửi.
+  static final Map<String, Uint8List> _bytesByPath = {};
+
   @override
-  Future<SharedPhoto?> latest(String token) async => _photo;
+  Future<SharedPhoto?> latest(String token) async => _latestPhoto;
+
   @override
   Future<Uint8List> image(String token, SharedPhoto photo) async =>
-      _bytes ?? Uint8List(0);
+      _bytesByPath[photo.imagePath] ?? Uint8List(0);
+
   @override
   Future<SharedPhoto> upload(
     String token,
@@ -150,12 +167,33 @@ class MockPhotoRepository implements PhotoRepository {
     String mimeType,
     String requestId,
   ) async {
-    _bytes = bytes;
-    return _photo = SharedPhoto(
+    final user = _currentUser();
+    final photo = SharedPhoto(
       id: requestId,
-      senderId: 'mock',
+      senderId: user?.id ?? 'mock-me',
       createdAt: DateTime.now(),
-      imagePath: 'mock',
+      imagePath: '/api/v1/photos/$requestId/image',
     );
+    _latestPhoto = photo;
+    _bytesByPath[photo.imagePath] = bytes;
+
+    // Đồng bộ sang Timeline để hiện lên feed ngay lập tức; truyền kèm bytes để
+    // timeline hiển thị đúng nội dung thay vì ảnh placeholder.
+    MockTimelineRepository.addPhoto(
+      PhotoItem(
+        id: photo.id,
+        coupleId: 'mock-couple',
+        senderId: photo.senderId,
+        senderDisplayName: user?.displayName ?? 'Bạn',
+        mimeType: mimeType,
+        sizeBytes: bytes.length,
+        createdAt: photo.createdAt,
+        imagePath: photo.imagePath,
+        reactions: const [],
+      ),
+      bytes: bytes,
+    );
+
+    return photo;
   }
 }

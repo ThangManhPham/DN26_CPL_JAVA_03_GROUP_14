@@ -101,12 +101,16 @@ abstract class AlbumRepository {
 }
 
 class HttpAlbumRepository implements AlbumRepository {
-  HttpAlbumRepository({required String baseUrl, http.Client? client})
-      : _base = Uri.parse(baseUrl),
+  HttpAlbumRepository({
+    required String baseUrl,
+    http.Client? client,
+    this.onUnauthenticated,
+  })  : _base = Uri.parse(baseUrl),
         _client = client ?? http.Client();
 
   final Uri _base;
   final http.Client _client;
+  final void Function()? onUnauthenticated;
 
   @override
   Future<List<AlbumSummary>> listAlbums(String token) async {
@@ -129,7 +133,7 @@ class HttpAlbumRepository implements AlbumRepository {
     final body = jsonEncode({
       'title': title,
       if (description != null && description.isNotEmpty) 'description': description,
-      if (coverPhotoId != null) 'coverPhotoId': coverPhotoId,
+      'coverPhotoId': ?coverPhotoId,
     });
     final response = await _client.post(
       _base.resolve('/api/v1/albums'),
@@ -197,6 +201,7 @@ class HttpAlbumRepository implements AlbumRepository {
   void _check(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) return;
     if (response.statusCode == 401) {
+      onUnauthenticated?.call();
       throw const AlbumException('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
     }
     if (response.statusCode == 403) {

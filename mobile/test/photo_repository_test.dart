@@ -50,4 +50,18 @@ void main() {
     );
     expect(await repository.latest('token'), isNull);
   });
+
+  test('photo API 401 clears the app session', () async {
+    var loggedOut = false;
+    final repository = HttpPhotoRepository(
+      baseUrl: 'http://localhost:8080',
+      client: MockClient((_) async => http.Response('', 401)),
+      onUnauthenticated: () => loggedOut = true,
+    );
+    await expectLater(
+      repository.latest('expired-token'),
+      throwsA(isA<PhotoException>()),
+    );
+    expect(loggedOut, isTrue);
+  });
 }
