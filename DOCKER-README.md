@@ -9,7 +9,7 @@ This setup runs the Spring Boot backend, PostgreSQL and a private S3-compatible 
 3. Check startup with docker compose ps and docker compose logs -f backend.
 4. Open http://localhost:8080/actuator/health or http://localhost:8080/swagger-ui.html. The S3 endpoint is http://localhost:9000 (local only).
 
-The backend waits for PostgreSQL and starts alongside the object store, which creates the private bucket on startup. Flyway applies the PostgreSQL migrations (V1–V4 plus the repeatable push-token table migration) at startup, while Hibernate validates the schema. The development Spring profile is active by default; Compose explicitly selects PostgreSQL migrations rather than the H2 fallback.
+The backend waits for PostgreSQL to pass its health check before starting. SeaweedFS starts as the local S3-compatible object store and uses the `S3_BUCKET` setting to prepare the private bucket. Flyway applies PostgreSQL migrations V1–V4 and V6, plus the repeatable push-token table migration, while Hibernate validates the schema. The development Spring profile is active by default; Compose explicitly selects PostgreSQL migrations rather than the H2 fallback.
 
 ## Stop and keep local data
 
@@ -25,4 +25,4 @@ If JWT_SECRET is blank, the dev profile generates a temporary signing key when t
 
 ## Image build
 
-The backend image uses a Maven/JDK 25 build stage and a smaller JRE 25 runtime stage. Maven packages the JAR during image build, and the runtime process runs as a non-root user. The runtime image includes curl for the actuator healthcheck.
+The backend image uses a Maven/JDK 21 build stage and a smaller JRE 21 runtime stage, matching `backend/pom.xml`. Maven's dependency cache is retained between BuildKit builds. The runtime process runs as a non-root user. In Compose, the backend root filesystem is read-only, `/tmp` is a size-limited temporary filesystem for Spring uploads, Linux capabilities are dropped, and privilege escalation is disabled. The runtime image includes curl for the actuator healthcheck.
